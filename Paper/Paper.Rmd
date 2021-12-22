@@ -1,0 +1,937 @@
+---
+title: "Machine learning and assessment"
+bibliography: paper.bib
+csl: apa.csl
+output:
+  word_document:
+    reference_docx: reference.docx
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(dpi=300)
+```
+
+
+
+"When we raise money it’s AI, when we hire it's machine learning, and when we do the work it's logistic regression."
+
+(Tweet by bio-statistician Daniella Witten; original author unknown)
+
+
+
+
+
+
+# Abstract
+
+Modern regression techniques (a.k.a. ‘machine learning’; ML) provide unprecedented flexibility to capture non-linear associations, and/or the effects of many potential predictors at once, while at the same time providing built-in overfitting control. 
+
+ML's focus on optimizing predictive accuracy on future observations, instead of explanation of the training data, is beneficial for the field of psychological assessment, which has prediction as one of its core tasks. 
+
+Sophisticated ML techniques (like random forests, support vector machines, artificial neural networks) have shown superior performance in terms of predictive accuracy in many applications and benchmark experiments. 
+
+At the same time, compared to simpler methods like a single decision tree or a penalized GLM, the gains in predictive accuracy provided by sophisticated methods may often be marginal, because simpler methods capture most of the explainable variance (signal) already. In addition, gains in predictive accuracy as estimated based on cross-validation may be swamped by practical aspects of a data problem, like population drift, measurement error, and a need for explainability.  
+
+In this paper, we aim to show what may be gained and lost by the use of simpler versus complex statistical techniques in a prediction problem from psychological assessment.
+
+
+
+<!-- To cite, use @key. To put citations in parentheses, use [@key]. To cite multiple entries, separate the keys by semicolons, e.g., [@key-1; @key-2; @key-3]. To suppress the mention of the author, add a minus sign before @, e.g., [-@R-base] -->
+
+
+
+# Introduction 
+
+Machine learning and artificial intelligence are by now familiar buzzwords in many fields of empirical research. In the field of psychological assessment, we also see increasing interest and application of methods from these fields, also in our journal [e.g., @OpityHeen21; @ParkyChow20; @AmmayChie20; @FokkyGrei18; @SaueyBuet16; @ElleyMcDo20; @FinkyJami20]. We believe ML and AI methods have the potential to contribute to our field. The buzz around these methods, however, can appear reminiscent of the tale of the emperor’s new clothes. We believe when it comes to ML and AI, the emperor is in fact wearing clothes, but their new- and fancyness may be somewhat of a mirage. Many of the powerful techniques used in machine learning (e.g., cross validation, regularization, ensembling) have long been known and fruitfully applied in more traditional statistical analyses, psychometrics and psychological assessment. 
+
+This editorial has two aims: 
+
+1. Provide a very short introduction to several modern statistical learning methods that provide optimal predictive accuracy and/or interpretability, and to discuss how they relate to more traditional regression techniques. 
+
+2. To discuss how novel methods and insights from the field of ML may contribute to the continuing improvement of our field, and to indicate possible pittfalls. 
+
+We will use the term statistical learning to refer to both more traditional and more recent tools for data analysis, because there is no clear distinction between statistics, artificial intelligence and machine learning. Of note, we believe newer data-analytic methods can only contribute to our field as long as their use is firmly rooted in existing statistical knowledge about sampling, estimation and uncertainty. For sake of brevity, in this editorial we focus on methods for statistical prediction, a.k.a. supervised learning methods. Thus, unsupervised learning methods (e.g., factor analysis, clustering, correlation networks, topic models from natural language processing) are outside the scope of this editorial.
+
+
+
+### Recent shifts in statistical prediction
+
+Recent development in statistical prediction methods have lead to two main shifts: 
+
+1. An increased focus on prediction.
+
+2. Increased flexibility, allowing for capturing non-linear associations and/or simultaneously modeling large numbers of potential predictor variables.
+
+We believe the first shift is highly beneficial for our field, because prediction of behavior is one of the core tasks of psychological assessment. In contrast, the field of psychology at large has traditionally often been interested in *explanation*; that is, developing and testing theories of human behavior. This has sometimes led researchers to overlook *prediction*, perhaps because their main aim was to explain behavior. A theory, however, can only explain real-world phenomena to the extent that it can accurately predict them [@YarkyWest17]. This focus on explanation has lead many researchers to focus on effect sizes (*R^2^*, Cohen's *d*) computed on the *training* data; that is, using observations that were used to fit the model. At the same time, most researchers in psychology are probably familiar with the phenomenon of *R^2^* automatically and spuriously increasing when explanatory variables are added to the model. More realistic *R^2^* values can be obtained, for example, through cross validation: by computing effect sizes on a sample of observations *not* used for fitting the model [@RooiyWeed20]. This importance of cross validation is certainly not new to the field of assessment, where it has been discussed for almost a century [@Lars31; @Mosi51].
+
+We believe the second shift brings both promises and pitfalls. The great promise of ML and AI techniques lies in their built-in overfitting control, because unrestricted flexibility leads to overfitting. In statistical learning, this has been formalized in the *bias-variance trade-off*. Informally, this trade-off states that the more flexible a model is allowed to approximate any possible patterns of association between predictors and response (i.e., the lower the bias), the worse the model will generalize to new samples from the same population (i.e., the higher the variance). To obtain optimally generalizable results for a given data problem and sample (size), bias and variance should thus be carefully balanced.  
+
+Bias can be increased and variance reduced in several ways, including: 
+
+* Restricting the complexity of the functional form (e.g., model only linear associations; model only main effects, no interactions).
+
+* Limiting the number of potential predictors used (e.g., include only few predictors; use sum-, component- or factor scores instead of item scores as predictors)
+
+* Using regularized estimation procedures (e.g, lasso, ridge, and elastic net regression; use of Bayesian priors; penalizing wigglyness). 
+
+* Ensembling: Aggregating the contributions of many variables, observations and/or learners. For example, in psychometrics we may aggregate individual items into a subscale or factor score to obtain a more reliable measure of the construct of interest. In ML, ensemble methods aggregate the predictions of many simpler or unstable models to obtain a stronger (more stable) final predictive model. 
+
+If the bias is well-chosen and realistic, generalizability of the fitted model will be improved. In other words: we can buy predictive power by assumption. If the bias is not well chosen (i.e., our assumptions are too unrealistic), predictive accuracy and generalizability will obviously suffer. 
+
+In the next section, we wish to illustrate the flexibility and predictive performance of several statistical learning techniques through an empirical example. The predictive (validity) question is: To what extent do responses on a measure of vocational preferences predict the type of university major completed. However, the prediction question itself is not our prime interest. Instead, we wish to use it to illustrate more general principles of flexibility, dimensionality, overfitting and interpretability in prediction problems in psychological assessment.
+
+
+# Empirical illustration
+
+### Method
+
+#### Dataset
+
+To illustrate a range of statistical learning and prediction methods, we use a dataset from the Open Psychometrics Project (https://openpsychometrics.org/_rawdata/). Data were collected through their website from 2015 to 2018. Respondents answered 48 items on vocational preferences, and additional items on personality and sociodemographic characteristics. 
+
+We investigate predictive validity of the RIASEC vocational preferences scales [@LiaoyArms08]. The RIASEC uses six occupational categories from Holland's Occupational Themes [@Holl59] theory: Realistic (R), Investigative (I), Artistic (A), Social (S), Enterprising (E), and Conventional (C). There are 8 items for each category, each describing a task (e.g., R6: "Fix a broken faucet" or I2: "Study animal behavior"), to which respondents answer on a 1-5 scale, with 1=Dislike, 3=Neutral, 5=Enjoy. The items are included in Appendix A.
+
+```{r, echo=FALSE}
+#########################
+##
+## Prepare data
+##
+data <- read.delim("data.csv", header = TRUE)
+
+## Items should be scored 1-5, 0 may be missings
+data[ , 1:48][sapply(data[ , 1:48], function(x) x == 0)] <- NA
+data <- data[complete.cases(data[ , 1:48]), ]
+
+## Select only university students
+data <- data[data$education >= 3, ]
+
+## Recode response variable
+psych_ids <- rowSums(sapply(c("psych", "psyhcology", "psycotherapy", "couns", 
+                              "behavior", "behaviour", "neuro"),
+                            function(x) grepl(x, data$major, ignore.case = TRUE)))
+data$major <- factor(ifelse(psych_ids > 0, "psychology", "other"))
+
+## Create train and test sets
+set.seed(42)
+test_ids <- sample(1:nrow(data), ceiling(nrow(data)/4))
+train_ids <- which(!1:nrow(data) %in% test_ids)
+train_y <- as.numeric(data$major)[train_ids] - 1
+test_y <- as.numeric(data$major)[test_ids] - 1
+
+data$Real <- rowSums(data[ , paste0("R", 1:8)])
+data$Inve <- rowSums(data[ , paste0("I", 1:8)])
+data$Arti <- rowSums(data[ , paste0("A", 1:8)])
+data$Soci <- rowSums(data[ , paste0("S", 1:8)])
+data$Ente <- rowSums(data[ , paste0("E", 1:8)])
+data$Conv <- rowSums(data[ , paste0("C", 1:8)])
+
+# train_ids2 <- 1:ceiling(.75*nrow(data))
+# test_ids2 <- which(!1:nrow(data) %in% train_ids2)
+# train_y2 <- as.numeric(data$major)[train_ids2] - 1
+# test_y2 <- as.numeric(data$major)[test_ids2] - 1
+```
+
+From the full dataset, we selected participants who completed at least a university degree, yielding a sample of *N =* `r nrow(data)` observations. Our criterion of interest is a binary variable, indicating whether respondents majored in Psychology, or in a different topic. We separated the data into 75\% training observations and 25\% test observations. Our training sample thus consists of `r length(train_ids)` respondents, of which `r round(100*table(data$major[train_ids])[2] / length(train_ids), digits = 2)`\% majored in psychology. Our test sample consisted of `r length(test_ids)` respondents, of which `r round(100*table(data$major[test_ids])[2] / length(test_ids), digits = 2)`\% majored in psychology. Univariate distributions and bivariate correlations between predictors are presented in Appendix B. 
+
+
+```{r eval = FALSE, echo=FALSE}
+## Correlations between TIPI items
+round(cor(data[ , paste0("TIPI", 1:10)]), digits = 3L)
+## Recode
+data[ , paste0("TIPI", 2*(1:5))] <- 8 - data[ , paste0("TIPI", 2*(1:5))] 
+data$extrav <- data$TIPI1 + data$TIPI6
+data$altru <- data$TIPI2 + data$TIPI7
+data$consc <- data$TIPI3 + data$TIPI8
+data$neurot <- data$TIPI4 + data$TIPI9
+data$open <- data$TIPI5 + data$TIPI10
+```
+
+
+```{r echo = FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=4.8}
+# par(mfrow = c(2, 3))
+# for (i in c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")) {
+#   dens <- density(data[ , i])
+#   plot(dens, main = "", xlab = i)
+#   polygon(dens, col="lightblue", border="black")  
+# }
+# round(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]), digits = 3L)
+library("pROC")
+library("xtable")
+# tab <- xtable(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]),
+#        caption = "Correlations between potential predictor variables.",
+#        align = c("r", "c", "c", "c", "c", "c", "c"), digits = 3L)
+# print(tab, type = "html", file = "cor_table.html")
+```
+
+
+#### Model fitting and parameter tuning
+
+We fitted (penalized) logistic regression models using package **``glmnet``** [version `r packageVersion("glmnet")`; @FrieyHast10]; generalized additive models (GAMs) with smoothing splines using package **``mgcv``** [version `r packageVersion("mgcv")`, @Wood17]; conditional inference trees using package **``partykit``** [version `r packageVersion("partykit")`, @HothyZeil15; @HothyHorn06]; gradient boosted tree ensembles using package **``gbm``** [version `r packageVersion("gbm")`, @GreeyBoeh20]; random forests using package **``ranger``** [version `r packageVersion("ranger")`, @WrigyZieg17]; prediction rule ensembles using package **``pre``** [version `r packageVersion("pre")`, @Fokk20]; $k$ nearest neighbours using package **``class``** [version `r packageVersion("class")`, @VeneyRipl02].
+
+<!-- We fitted support vector machines using package **``kernlab``** [version `r packageVersion("kernlab")`; @KaraySmol04]. -->
+
+For tuning the parameters of random forests, boosted tree ensembles and prediction rule ensembles, we used package **``caret``** [version `r packageVersion("caret")`, @Kuhn21]. For tuning the parameters of conditional inference trees and $k$ nearest neighbours, we wrote custom code; we tuned the penalized regression models using function `cv.glmnet` from package **`glmnet`**. We did not tune the parameters of the GAMs with smoothing splines, because we expected the defaults to work well out of the box.
+
+
+
+
+#### Evaluating predictive accuracy
+
+To evaluate predictive accuracy, we used the Brier score. The use of accuracy measures derived from the confusion matrix of actual and predicted classes, like the misclassification error, sensitivity (a.k.a. recall), positive predictive value (a.k.a. precision) or Matthew's correlation coefficient are pervasive in the machine learning literature. However, these measures disregard the quality of predicted probabilities from a fitted model and we therefore recommend against their use for evaluating predictive accuracy [@GneiyRaft07]. Methods for predicting a binary outcome should not only provide a predicted class, they should also provide predicted probabilities to quantify the uncertainty of the classification. To evaluate performance, the quality of this probability forecast should be evaluated. 
+
+The Brier score quantifies this quality by taking the mean squared error of the predicted probabilities: 
+
+$$\frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{p}_i)^2$$
+
+Where $y_i$ is the observed outcome for observation $i$, taking a value of 0 or 1; $\hat{p}_i$ is the model's predicted probability, taking a value between 0 and 1. Note that we can compute the Brier score on the training and on the test observations; thus $N$ can be taken to be the training or the test sample size. A Brier score equal to the variance of $y$ indicates performance no better than chance (in the current dataset, the variance was `r round(prop.table(table(train_y))[2], digits = 4)` for training and `r round(prop.table(table(test_y))[2], digits = 4)` for test data). If we take 1 minus the Brier score divided by the variance of $y$, this yields a pseudo-$R^2$ measure, which takes values between 0 (indicating performance no better than chance) and 1 (indicating perfect accuracy). 
+
+
+
+# Results
+
+### Prediction using subscale scores
+
+#### (Penalized) logistic regression
+
+Using CV to determine the optimal value of the penalty parameter $\lambda$, the optimal value was found to be 0 for the ridge as well as the lasso penaly. We thus fitted an unpenalized logistic regression, which provides the benefit of standard errors (and $p-$values) for the coefficients:
+
+```{r, echo=FALSE}
+glmod <- glm(major ~ Real + Inve + Arti + Soci + Ente + Conv, 
+             data = data[train_ids , ], family = "binomial")
+sum <- as.data.frame(summary(glmod)$coefficients)
+sum[,4] <- rep("<.001", each = 7)
+tab <- xtable(sum,
+       caption = "Fitted logistic regression model.",
+       align = c("r", "c", "c", "c", "c"), digits = 3L)
+#print(tab, type = "html", file = "glm_table.html")
+sum[,1:3] <- round(sum[,1:3], digits = 3)
+sum
+glm_preds_train <- predict(glmod, newdata = data[train_ids, ], type = "response")
+glm_preds_test <- predict(glmod, newdata = data[test_ids, ], type = "response")
+```
+
+The results indicate that each vocational preference scale has a significant effect on the choice of major. We see the strongest effect is a positive effect from the Social preferences scale, and the weakest effect is a negative effect from the Conventional preferences scale.
+
+
+#### Generalized additive model
+
+We fitted a generalized additive model with a smoothing spline for each subscale score. Smoothing splines allow for flexibly approximating non-linear shapes of association between a predictor and response. At the same time, the method prevents overfitting by penalizing the wigglyness of the fitted curves. This explains their name: They provide a flexible but smooth approximation to the data. It is an additive model, resembling the GLM fitted earlier: Both assume interactions to be absent from the data, but GAMs additionally allow for capturing non-linear effects of each predictor.
+
+We employed the defaults of thin-plate regression splines and generalized cross validation method to fit the smoothing splines. This provides built-in regularization of the wigglyness, without the need for choosing an optimal value for penalty or tuning parameters. For smaller samples, restricted maximum likelihood (REML) would be preferred. The fitted curves look as follows:  
+
+```{r, echo=FALSE, eval=FALSE, fig.height=6, fig.width=11, warning=FALSE, message=FALSE}
+library("mgcv")
+gamod <- gam(major ~ s(Real) + s(Inve) + s(Arti) + s(Soci) + s(Ente) + s(Conv), 
+             data = data[train_ids , ], family = "binomial")
+save(gamod, file = "GAM_subscales.Rda")
+```
+
+
+```{r, echo=FALSE, fig.width=7, fig.height=4, warning=FALSE, message=FALSE}
+library("mgcv")
+load(file = "GAM_subscales.Rda")
+par(mfrow = c(2, 3))
+plot(gamod)
+```
+
+Like in the logistic regression, we see positive effects of the Social and Investigative subscales, and negative effects of the Realistic, Artistic, Enterprising and Conventional subscales. The Social subscale appears to have a linear effect, but the other subscales' effects exhibit some non-linearity. Note that theplots show the *conditional* effect of each predictor. The values on the $y$-axis thus reflect the expected increase in log-odds for each value of the subscale on the $x$-axis, assuming all other variables remain constant. We can also test the significance of the effect of each predictor:
+
+```{r,  echo=FALSE, warning=FALSE, message=FALSE}
+sum <- summary(gamod)
+sum <- data.frame(round(sum$s.table[ , -2], digits = 3))
+sum[,3] <- rep("<.001", each = 6)
+sum
+gam_preds_train <- predict(gamod, newdata = data[train_ids, ], type = "response")
+gam_preds_test <- predict(gamod, newdata = data[test_ids, ], type = "response")
+```
+
+The EDF values reflect the empirical degrees of freedom. The stronger the non-linearity in a curve, the more degrees of freedom it uses. For a linear slope, the EDF would equal 1; higher values indicate stronger non-linearity. For the social preferences subscale, the EDF value indicates a near linear effect, which we also observed in the plots above. The $\chi^2$ values quantify the strength of the evidence of each predictor's effect. Each predictor shows a statistically significant effect on the outcome, and the strength of the effect have the same ordering as in the logistic regression model. 
+
+
+
+#### Decision tree
+
+We fit a single decision tree using the conditional inference tree algorithm [@HothyHorn06]. This algorithm eliminates the variable selection bias present in many other decision-tree algorithms. Decision-tree methods and variable selection bias are discussed in more detail by by @StrobyMall09, who provide a comprehensive introduction to decision-tree methods aimed at psychologists. According to the CV results, a tree depth of 6 was optimal, yielding a tree with $2^6 = 64$ terminal nodes. Thus, for this data problem, the most accurate tree is surely not the most interpretable. 
+
+For illustration, we show the decision tree pruned to a depth of three below: 
+
+```{r, echo=FALSE, fig.height=4, fig.width=7, warning=FALSE, message=FALSE}
+library("partykit")
+ct <- ctree(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ], 
+            maxdepth = 6)
+#myfun <- function(i) {c(
+#  paste("n =", i$n),
+#  format(round(i$distribution[2]/i$n, digits = 3), nsmall = 3)
+#)}
+#ct2 <- as.simpleparty(ct)
+#plot(ct2, tp = node_terminal, tp_args = list(FUN = myfun), gp = gpar(cex = .5))
+ct3 <- ctree(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ], 
+            maxdepth = 3)
+plot(ct3, gp = gpar(cex = .6))
+ct_preds_train <- predict(ct, type = "prob")[ , "psychology"]
+ct_preds_test <- predict(ct, newdata = data[test_ids , ], type = "prob")[ , "psychology"]
+```
+
+We see that Social, Realistic and Enterprising preferences occur in the first splits of the tree, which were also identified by the two previous models as the most important predictors. The bars in the terminal nodes show the proportions of observations who (did not) choose psychology as a major. Again, the Social preferences scale shows a positive association with the response, and the Realistic and Enterpristing preferences scales show a negative association. Note also that split number 10, involving the Enterprising subscale, may reflect an interaction effect, because this predictor only appears relevant for higher values of the Social subscale, and lower values of the Realistic subscale. However, such a split may also reflect additive effects combined with multicollinearity. Thus, although decision trees can *capture* interaction effects, they cannot be used to statistically test their significance.
+
+
+
+#### Boosted tree ensemble
+
+Although decision trees are easy to interpret, they suffer more strongly from instability than GLMs and GAMs. With instability, we mean that a small change in the training data can lead to large changes in the resulting model. The cause of this instability partly lies in the rather rough cuts made in the tree. Every next split that is implemented, is conditional on previous splits. If the first split in the tree would have been made using a different predictor or different split point, the following splits may also turn out different, yielding quite a different tree structure.
+
+Decision tree ensembling method take advantage of this instability. Ensemble methods derive a large number of learners (e.g., trees), and each of these learners is fit on different versions of the training dataset. For example, different versions of the training data can be created by drawing different random samples from the training set for fitting each tree, a method also known as bagging. More powerful tree ensembling methods are random forests and boosting.
+
+Tree ensembles are powerful prediction methods, because averaging over the predictions of many unstable learners yields a final model that is more accurate than any of the individual learners. This is comparable to averaging or summing items into subscales: Individual items may have low reliability (high error), but a subscale score composed of a sufficient number of items with at least some reliability will have high reliability.
+
+The first tree ensemble method we apply to the data is a gradient boosted ensemble. Boosting [@BuhlyHoth07] uses sequential fitting of so-called weak learners to create a strong learner. Weak learners are simple models, that provide predictive accuracy (slightly) better than chance. When boosting trees, we use weak learners in the form of small trees, e.g., trees with only 1-7 splits. Sequential learning means that each consecutive tree is adjusted for the predictions of previous trees. In effect, observations that were well (badly) predicted by previous trees receive less (more) weight when fitting the current tree. An introduction and tutorial to tree boosting methods is provided in @ElityLeat08.
+
+Gradient boosting is one of the top prediction approaches. Many forecasting competitions have been won by using gradient boosting. To obtain good performance with boosting, careful tuning of the model-fitting parameters is necessary. The most important parameters are tree size, the number of trees in the ensemble and the shrinkage or learning rate. The latter parameter reflects the weight that is attributed to the predictions of each previous tree, when fitting the current tree. In the current application, the optimal number of trees found by 10-fold CV was 1100, with an learning rate of 0.01 and a tree depth of three. The latter means that interaction effects of at most three variables can be captured, and the individual trees contain at most seven splits and eight terminal nodes.
+
+
+```{r,echo=FALSE, eval=FALSE, warning=FALSE, message = FALSE}
+library("gbm")
+set.seed(42)
+gb <- gbm(I(as.numeric(major)-1) ~ Real + Inve + Arti + Soci + Ente + Conv, 
+          n.trees = 1100, interaction.depth = 3L, shrinkage = 0.01, 
+          data = data[train_ids , ], )
+save(gb, file = "GBM_subscales.Rda")
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message = FALSE}
+library("gbm")
+load("GBM_subscales.Rda")
+gb_preds_train <- predict(gb, newdata = data[train_ids, ], type = "response")
+gb_preds_test <- predict(gb, newdata = data[test_ids, ], type = "response")
+sum <- summary(gb, plotit = FALSE, method = permutation.test.gbm)
+```
+
+A disadvantage of decision tree ensembles is their black box nature: While individual trees are generally easy to interpret, an ensemble of trees is impossible for to grasp. Therefore, so-called variable importance measures have been developed for interpretation of tree ensembles, which aim to quantify the effect of predictor variable on the predictions of the ensemble. In this paper, we use the permutation importances proposed by Breiman [@Brei01]. These quantify how much an ensemble's predictive accuracy would be reduced, if the values of each of the predictor variables are randomly shuffled.
+
+Importance measures provide a useful ranking of the contributions of each predictor to the ensemble's predictions, but should be interpreted with care. They should not be used to judge the significance of the effect of predictors; tree ensembles can easily include predictors in the model which in fact have no effect on the outcome. Furthermore, there are many ways to compute variable importance measures [TODO: ADD REFS], which each may yield different conclusions, especially when predictors are correlated. Especially with correlated predictors, permuting the values of predictor variables may lead to unrealistic data patterns.  
+
+
+
+```{r echo=FALSE, fig.height=3, fig.width=4, warning=FALSE, message=FALSE}
+barplot(sum$rel.inf, main = "GBM permutation importances", names.arg = sum$var,
+        ylab = "Importance", cex.lab = .7, cex.axis = .7, cex.main = .7, 
+        cex.names = .7)
+```
+
+The variable importances of the gradient boosted ensemble indicate a similar pattern as the logistic regression and the GAM. 
+
+
+#### Random forest
+
+Another popular decision-tree ensembling method are random forests [@Brei01]. Like boosted tree ensembles, random forests fit a large number of decision trees, and the ensemble's predictions average over the predictions of the individual trees. Random forests do not employ sequential learning: each tree is fitted, without adjusting for predictions of the other trees in the ensemble. Unlike boosting, random forests employ trees with many splits: in the original algorithm of [@Brei01], the training observations are split into subgroups until no further splitting is possible. This yields very complex trees, with have very low bias, but very high variance. This very high variance is reduced by averaging over the predictions of the many trees in the ensemble. Later studies, however, have shown that large trees can lead to unstable results when there are many correlated predictors that are at best weakly correlated to the response [@Sega04]. It is thus beneficial to grow large, but not too large trees; the optimal tree size is best determined through CV. 
+
+The most characteristic feature of random forests is how it selects variables for splitting. Random forests select a random sample of *mtry* candidate predictor variables for every split in every tree. From this set of predictor variables, the best splitting variable and value is then selected. This adds a level of randomization to the algorithm, from which the method also received its name. This randomization might appear counter intuitive: In fact, it only increases the variance of each individual tree, without reducing bias. However, the predictive performance of the ensemble is actually improved by the randomization. Without the randomization, each tree of the ensemble would likely use the same set of relatively strong predictors, and thus be very similar. Averaging over many very similar trees is unlikely to improve predictive accuracy. Because the randomization makes the trees more dissimilar, it strengthens the performance of the ensemble. 
+
+Using 10-fold CV, we found the optimal value of the *mtry* parameter to be 3, and the optimal minimum sample size in each terminal node to be 500. With a training sample size of `r length(train_ids)`, this yields trees with at most `r floor(length(train_ids)/500)` terminal nodes.
+
+```{r echo=FALSE, eval=FALSE}
+library("ranger")
+set.seed(42)
+rf <- ranger(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ],
+                   probability = TRUE, mtry = 3L, min.node.size = 500, 
+             importance = "permutation")
+save(rf, file = "RF_subscales.Rda")
+```
+
+```{r echo=FALSE, fig.height=3, fig.width=4, warning=FALSE, message=FALSE}
+library("ranger")
+load(file = "RF_subscales.Rda")
+rf_preds_train <- predict(rf, data = data[train_ids, ])$predictions[ , "psychology"]
+rf_preds_test <- predict(rf, data = data[test_ids, ])$predictions[ , "psychology"]
+imps <- ranger::importance(rf)
+imps <- imps[rev(order(imps))]
+barplot(imps, main = "RF permutation importances", 
+        ylab = "Importance", cex.lab = .7, cex.axis = .7, cex.main = .7, 
+        cex.names = .7)
+```
+
+The variable importances of the random forest indicate a similar pattern as the logistic regression, GAM and boosted tree ensemble. 
+
+
+
+
+#### Prediction rule ensemble
+
+Prediction rule ensembles aim to strike a balance between the high predictive accuracy of decision tree ensembles, and the ease of interpretability of single decision trees and GLMs [@Fokk20; @FokkyStro20]. The method fits a boosted decision tree ensemble to the training dataset, takes every node from every tree in the ensemble and codes it as a rule of the form *if [conditions] then [prediction]*. For example, we can code membership of node 2 in the decision tree above as the condition: *Social $\leq$ 27*. Similarly, membership of node 14 can be coded as a set of conditions: *Social > 27 & Realistic > 17 & Realistic $\leq$ 24*. The rules are then dummy variables, indicating membership of a node: A rule takes a value of 1 if its conditions apply (i.e., the observation is a member of the node), and takes a value of 0 if its conditions do not apply (i.e., the observation is not a member of the node). 
+
+Through applying a penalized regression on a dataset containing these both these rules as well as the original predictor variables, we obtain a prediction rule ensemble (PRE). This technique combines the strengths of penalized regression, decision tree ensembles and single decision trees. When a sparse penalized regression method, like lasso regression is used, we can obtain a small set of rules as the final ensemble. Although the boosted decision tree ensemble will initially contribute a very large number of nodes 9rules), use of lasso regression will give many of these rules a weight of zero, thus eliminating them from the ensemble.
+
+The fitted PRE consists of 48 rules, providing a great simplification compared to the $>500$ trees of the boosted ensemble and random forest. Note that the current dataset is exceptionally large, which tends to result in longer rule lists if only predictive accuracy is optimized, because very large samples allow for capturing even very nuanced effects. 
+
+Below, the eight most important rules are provided, and the variable importances are depicted. Each rule has obtained an estimated coefficient, which are logistic regression coefficients. They reflect the expected increase in log-odds if the conditions of the rule apply. The importances show a pattern similar to that of the previous methods. Note that variable importances for PRE are computed differently for decision-tree ensembles, and do not require permutation of predictor variables. More detail about the method can be found in @FokkyStro20, which provides an introduction to PRE aimed at researchers in psychology. 
+ 
+```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+library("pre")
+set.seed(42)
+pr <- pre(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ], 
+            maxdepth = 3, learnrate = .05)
+save(pr, file = "PRE_subscales.Rda")
+```
+
+```{r, echo=FALSE, fig.width=4, fig.height=3, warning=FALSE, message=FALSE}
+library("pre")
+load("PRE_subscales.Rda")
+pr_preds_train <- predict(pr, type = "response")
+pr_preds_test <- predict(pr, newdata = data[test_ids , ], type = "response")
+imps <- pre::importance(pr, cex.names = .7, cex.axis = .1, cex.lab =.7, cex.main = .7, 
+                        main = "PRE importances", las = 1, diag.xlab=FALSE)
+imps <- imps$baseimps[1:8, c("description", "coefficient")]
+imps$coefficient <- round(imps$coefficient, digits = 3)
+print(imps, row.names = FALSE)
+``` 
+
+#### $k$ nearest neighbours
+
+A prime example of a highly flexible method, perhaps the most non-parametric method of all, is the method of *k*-nearest neighbours (kNN). In fact, kNN does not even fit a model; it merely remembers the training observations. To compute predictions for new observations, kNN computes the distance of a new observation to all the training observations in order to find the *k* nearest ones (the neighbours). It then takes the response variable values of these $k$ neighbours and takes their mean as the predicted value for the new observation. This provides the greatest possible flexibility of all prediction methods, as it does not impose *any* a-priori restriction on the shape of association between predictors and response. This flexibility is both the strength and weakness of the method: when the number of predictor variables increases, the performance of kNN worsens fast. Only in lower dimensions is the great flexibility of kNN is an beneficial property. 
+
+The method has only a single tuning parameter: *k*. With larger values of *k*, the predicted value for a new observation averages over a larger number of observations (neighbours). Thus, higher values of $k$ yield lower variance, but higher bias. Using 10-fold CV, we found the optimal value for $k$ to be 300.
+
+```{r, eval=FALSE, echo=FALSE}
+library("class")
+varnames <- c("Real", "Inve", "Arti", "Soci", "Ente", "Conv")
+## Model for training predictions
+knn_mod <- knn(train = data[train_ids , varnames], 
+               test = data[train_ids , varnames], 
+               cl = as.factor(data[train_ids, "major"]), 
+               k = 300, use.all = TRUE, prob = TRUE)
+## Need to obtain predicted probability for second class
+knn_preds_train <- ifelse(
+  knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
+save(knn_preds_train, file = "knn_preds_train_scales.Rda")
+
+## Model for testing predictions
+knn_mod <- knn(train = data[train_ids , varnames], 
+               test = data[test_ids , varnames], 
+               cl = as.factor(data[train_ids, "major"]), 
+               k = 300, use.all = TRUE, prob = TRUE)
+knn_preds_test <- ifelse(
+  knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
+save(knn_preds_test, file = "knn_preds_test_scales.Rda")
+```
+
+```{r, echo=FALSE}
+library("class")
+load("knn_preds_train_scales.Rda")
+load("knn_preds_test_scales.Rda")
+```
+
+
+
+
+
+#### Comparing predictive accuracy
+
+For each of the fitted models, we computed predictive accuracy on test observations. Below, pseudo-$R^2$ values are depicted; the error bars depict 95\% confidence intervals. 
+
+```{r echo=FALSE, message = FALSE, warning=FALSE, fig.width=8, fig.height=3.5}
+## Gather results
+preds_train <- data.frame(bm_preds_train = rep(mean(train_y), times = length(train_ids)), 
+                          glm_preds_train, gam_preds_train, 
+                          ct_preds_train, pr_preds_train, gb_preds_train,
+                          rf_preds_train, knn_preds_train)
+preds_test <- data.frame(bm_preds_test = rep(mean(train_y), times = length(test_ids)),
+                          glm_preds_test, gam_preds_test, 
+                          ct_preds_test, pr_preds_test, gb_preds_test,
+                         rf_preds_test, knn_preds_test)
+results <- data.frame(
+  AUC_train = sapply(preds_train, function(x) auc(train_y, x)),
+  AUC_test = sapply(preds_test, function(x) auc(test_y, x)),
+  Brier_train = sapply(preds_train, function(x) mean((train_y - x)^2)),
+  Brier_test = sapply(preds_test, function(x) mean((test_y - x)^2)))
+results$R2_train <- 1 - results$Brier_train / results$Brier_train[1]
+results$R2_test <- 1 - results$Brier_test / results$Brier_test[1]
+rownames(results) <- c("chance", "(penalized)\nGLM", "Smoothing\nsplines", 
+                       "tree", "PRE", "Boosted\nensemble", "Random\nforest", "kNN")
+#round(results, digits = 4)
+#xtable(results)
+
+tmp <- data.frame(
+  R2 = c(results$R2_train[-1], results$R2_test[-1]),
+  SE = c(sapply((preds_train[,-1] - train_y)^2, 
+                function(x) sd(x)/(sqrt(nrow(preds_train))*results$Brier_train[1])),
+         sapply((preds_test[,-1] - test_y)^2, 
+                function(x) sd(x)/(sqrt(nrow(preds_test))*results$Brier_test[1]))),
+  data = rep(c("train", "test"), each = nrow(results)-1), 
+  method = factor(rep(rownames(results)[-1]))
+)
+tmp$method <- factor(tmp$method, c("(penalized)\nGLM", "Smoothing\nsplines", 
+                       "tree", "PRE", "Boosted\nensemble", "Random\nforest", "kNN"))
+
+## Plot results
+library("ggplot2")
+p <- ggplot(tmp, aes(x = method, y = R2)) +
+  geom_point(aes(color = data, fill = data), 
+    stat = "identity", 
+           position = position_dodge(0.4)) + 
+  xlab("") + ylab("Pseudo R squared") + theme(legend.title = element_blank()) +
+  scale_color_manual(values = c("#0073C2FF", "#EFC000FF")) +
+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) + 
+  geom_errorbar(aes(color=data, ymin = R2-1.96*SE, 
+                    ymax = R2+1.96*SE), 
+                width = .2, position = position_dodge(0.4))
+p
+```
+
+
+```{r, echo=FALSE}
+tmp <- results[-1, -(1:2)]
+colnames(tmp) <- c("Brier train", "Brier test", "R2 train", "R2 test")
+rownames(tmp) <- c("(penalized) GLM", "GAM", "tree", "PRE", "GBM", "RF", "kNN")
+round(tmp, digits = 4)
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+## How do the means and variances of the predicted values behave between methods?
+colnames(preds_train) <- colnames(preds_test) <- c("BM", "GLM", "GAM", "tree", "PRE", "GBM", "RF", "kNN")
+
+par(mfrow = c(1,2))
+
+boxplot(preds_train)
+abline(mean(train_y), 0, col = "red")
+boxplot(preds_test)
+abline(mean(test_y), 0, col = "red")
+
+plot(sapply(preds_train, mean), main = "Mean of predictions (training data)",
+     ylim = c(0.192, 0.2))
+abline(mean(train_y), 0, col = "red")
+plot(sapply(preds_test, mean), main = "Mean of predictions (test data)",
+     ylim = c(0.192, 0.2))
+abline(mean(test_y), 0, col = "red")
+
+plot(sapply(preds_train, sd), main = "SD of predictions (training data)",
+     ylim = c(0, 0.3))
+abline(var(train_y), 0, col = "red")
+plot(sapply(preds_test, sd), main = "SD of predictions (test data)",
+     ylim = c(0, 0.3))
+abline(var(test_y), 0, col = "red")
+```
+
+
+The results indicate that best performance on the test data was obtained with the boosted tree ensemble, followed by the generalized additive model, followed by the prediction rule ensemble, followed by the random forest, followed by $k$ nearest neighbours, followed by logistic regression, and finally the decision tree. This latter result is rather unsurprising: a single decision tree are generally expected to have both higher variance as well as higher bias than other prediction methods (but they often 'win' in terms of interpretability). The boosted tree ensemble performing best is also not very surprising, giving it's high competitive performance in forecasting competitions. 
+
+From the graph, we obtain three key take-aways:
+
+1. None of the methods performs significantly worse or better than any of the other methods.
+
+2. The difference between training and test performance increases with increasing flexibility. The methods that can incorporate linear main effects (logistic regression, smoothing splines, prediction rule ensembles) show the smallest difference in performance on training and test data. These methods thus appear less likely to overfit. Especially the generalized additive model appears to provide good interpretability as well as accuracy, and good overfitting control.
+
+3. The more flexible methods (single decision tree, $k$ nearest neighbours, boosted ensemble and the random forest) show greater susceptibility to overfitting.
+
+The subscale scores did not provide strong predictive power, with $R^2$ indicative of a moderate effect. We therefore evaluate whether use of 48 RIASEC item scores for prediction improves performance:
+
+
+
+### Prediction using item scores
+
+
+```{r,echo=FALSE}
+varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
+```
+
+For the logistic regression, we found that regularization with the lasso penalty would improve predictive accuracy, according to the 10-fold CV results. For the generalized additive model, we set the number of basis functions of the thin-plate regression splines to 4, instead of the default of 8, because item responses can only take only 5 possible values; increasing the number of basis functions would yield an unidentified model. Furthermore, because of the larger number of predictors, and the benefit of penalization observed in the logistic regression, we also applied a penalty to the linear part of each smoothing spline function, so that some items can be completely eliminated from the model. For all other methods, we again applied 10-fold CV on the training data to determine the optimal value of the model-fitting parameters.
+
+For each method, except the single decision tree and $k$NN, we again computed measures of variable importance, which are plotted below. Note that the coefficients of the logistic regression reflect both direction and strength of the effect. For the other models, the measures of variable importance only reflect the strength, not the direction, of the variables' effects. Furthermore, the coefficients in the logistic regression and the importance measures of the prediction rule ensemble are on the scale of standard deviations, not variances. The importance measures for the generalized additive model, boosted ensemble and random forest are on the scale of variances, and we thus plotted their square roots to allow for easier comparison between methods.
+
+
+```{r, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
+library("mgcv")
+#apply(data[train_ids, varnames], 2, table) ## all items have 5 options
+gam_form <- formula(paste0("major ~", paste0("s(", varnames, ", k=4)", collapse = " + ")))
+#memory.limit(size = 32000)
+gamod <- gam(gam_form, data = data[train_ids , ], family = "binomial", 
+             select = TRUE)
+save(gamod, file = "GAM_items.Rda")
+```
+
+```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+library("pre")
+varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
+pr_form <- formula(paste("major ~", paste(varnames, collapse = "+")))
+set.seed(42)
+pr <- pre(pr_form, data = data[train_ids , ], maxdepth = 3, learnrate = .05,
+          verbose = TRUE, family = "binomial")
+save(pr, file = "PRE_items.Rda")
+```
+
+```{r, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
+library("gbm")
+set.seed(42)
+gbm_form <- formula(paste("I(as.numeric(major)-1) ~ ", 
+      paste(paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8), collapse = "+")))
+gb <- gbm(gbm_form, n.trees = 3500, interaction.depth = 5L, shrinkage = 0.01, 
+          data = data[train_ids , ])
+save(gb, file = "GBM_items.Rda")
+sum <- summary(gb, plotit = FALSE, method = permutation.test.gbm)
+save(sum, file = "gb_i_summary.Rda")
+```
+
+```{r echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
+library("ranger")
+set.seed(42)
+varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
+rf_form <- formula(paste("major ~", paste(varnames, collapse = "+")))
+rf <- ranger(rf_form, data = data[train_ids , ], probability = TRUE, 
+             mtry = 6L, min.node.size = 250, importance = "permutation")
+save(rf, file = "RF_items.Rda")
+```
+
+
+
+
+```{r, echo=FALSE, fig.width=6, fig.height=1.75, warning=FALSE, message=FALSE}
+## default par(mar = c(5, 4, 4, 2) + 0.1) with c(bottom, left, top, right) margins
+## default par(mgp = c(3, 1, 0) with c(axis title, axis labels, axis line) margins
+par(mar = c(2, 4, 2, 2), mgp = c(1.5, .5, 0), tck = -0.05)
+library("glmnet")
+library("colorspace")
+X <- as.matrix(data[train_ids, varnames])
+set.seed(42)  
+glmod <- glmnet(X, train_y, family = "binomial", alpha = 1, lambda = 0.0003251157)
+plot(coef(glmod)[-1], xaxt = "n", ylab = "Estimated coefficient",
+     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
+     main = " ", cex.main = .7)
+text(coef(glmod)[-1], labels = varnames, cex = .5, 
+     col = rep(qualitative_hcl(6), each = 8))
+abline(0, 0, col = "grey")
+axis(1, 3.5 + c(0:5)*8, labels = c("Realistic", "Investigative", "Artistic", "Social" , 
+                             "Enterprising", "Conventional"), 
+     cex.axis = .7)
+legend("topleft", legend = "Penalized logistic regression", cex = .7, bty = "n")
+glm_preds_train <- predict(glmod, newx = X, type = "response")
+glm_preds_test <- predict(glmod, newx = as.matrix(data[test_ids, varnames]), type = "response")
+
+load(file = "GAM_items.Rda")
+sum <- summary(gamod)
+plot(sqrt(sum$chi.sq), xaxt = "n", ylab = expression(sqrt(chi^2)), 
+     main = " ", cex.main = .7,
+     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ")
+text(sqrt(sum$chi.sq), labels = varnames, cex = .5, 
+     col = rep(qualitative_hcl(6), each = 8))
+axis(1, 3.5 + c(0:5)*8, labels = c("Realistic", "Investigative", "Artistic", "Social" , 
+                             "Enterprising", "Conventional"), 
+     cex.axis = .7)
+legend("topleft", legend = "Smoothing splines (GAM)", cex = .7, bty = "n")
+gam_preds_train <- predict(gamod, newdata = data[train_ids, ], type = "response")
+gam_preds_test <- predict(gamod, newdata = data[test_ids, ], type = "response")
+
+load(file = "GBM_items.Rda")
+gb_preds_train <- predict(gb, newdata = data[train_ids, ], type = "response")
+gb_preds_test <- predict(gb, newdata = data[test_ids, ], type = "response")
+load(file = "gb_i_summary.Rda")
+imps <- sum[match(varnames, sum$var), ]
+plot(sqrt(imps$rel.inf), xaxt = "n", main = " ",
+     ylab = expression(sqrt(Importance)), cex.main = .7,
+     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ")
+text(sqrt(imps$rel.inf), labels = imps$var, cex = .5, 
+     col = rep(qualitative_hcl(6), each = 8))
+axis(1, 3.5 + c(0:5)*8, labels = c("Realistic", "Investigative", "Artistic", "Social" , 
+                             "Enterprising", "Conventional"), 
+     cex.axis = .7)
+legend("topleft", legend = "Boosted ensemble", cex = .7, bty = "n")
+
+library("ranger")
+load("RF_items.Rda")
+rf_preds_train <- predict(rf, data = data[train_ids, ])$predictions[ , "psychology"]
+rf_preds_test <- predict(rf, data = data[test_ids, ])$predictions[ , "psychology"]
+imps <- ranger::importance(rf)
+plot(sqrt(imps), xaxt = "n", main = " ",
+     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ",
+     ylab = expression(sqrt(Importance)), cex.main = .7)
+text(sqrt(imps), labels = names(imps), cex = .5, 
+     col = rep(qualitative_hcl(6), each = 8))
+axis(1, 3.5 + c(0:5)*8, labels = c("Realistic", "Investigative", "Artistic", "Social" , 
+                             "Enterprising", "Conventional"), 
+     cex.axis = .7)
+legend("topleft", legend = "Random forest", cex = .7, bty = "n")
+
+load("PRE_items.Rda")
+pr_preds_train <- predict(pr, type = "response")
+pr_preds_test <- predict(pr, newdata = data[test_ids , ], type = "response")
+imps <- pre::importance(pr, cex.axis = .7, plot = FALSE)$varimps
+zero_vars <- varnames[!varnames %in% imps[ , 1]]
+imps <- rbind(imps, data.frame(varname = zero_vars, 
+                               imp = rep(0, times = length(zero_vars))))
+imps <- imps[match(varnames, imps$varname), ]
+plot(imps$imp, xaxt = "n", main = " ",
+     ylab = "Importance",
+     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", cex.main = .7)
+text(imps$imp, labels = imps$varname, cex = .5, 
+     col = rep(qualitative_hcl(6), each = 8))
+axis(1, 3.5 + c(0:5)*8, labels = c("Realistic", "Investigative", "Artistic", "Social" , 
+                             "Enterprising", "Conventional"), 
+     cex.axis = .7)
+legend("topleft", legend = "Prediction rule ensemble", cex = .7, bty = "n")
+```
+
+Compared to the analyses using subscale scores, the variable contributions yield similar conclusions: the Social preferences scale contains the strongest predictors, while the items in the Conventional and Artistic subscales contribute least. All methods found items S3 ("I would like to help people who have problems with drugs or alcohol") and S5 ("I would like to help people with family-related problems") to contribute most. For most methods, this was followed by item R3 ("I would like to work on an offshore oil-drilling rig"), I2 ("I would like to study animal behavior") and E5 ("I would like to manage a department within a large company"). The main difference with the analyses using subscale scores is that the item score analyses suggest greater relevance of the Investigative subscale items. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library("partykit")
+ct_form <- formula(paste("major ~", paste(varnames, collapse = "+")))
+ct <- ctree(ct_form, data = data[train_ids , ], 
+            maxdepth = 6)
+# myfun <- function(i) {c(
+#   paste("n =", i$n),
+#   format(round(i$distribution[2]/i$n, digits = 3), nsmall = 3)
+# )}
+#ct2 <- as.simpleparty(ct)
+#plot(ct2, tp = node_terminal, tp_args = list(FUN = myfun), gp = gpar(cex = .5))
+ct_preds_train <- predict(ct, type = "prob")[ , "psychology"]
+ct_preds_test <- predict(ct, newdata = data[test_ids , ], type = "prob")[ , "psychology"]
+```
+
+```{r echo=FALSE,eval=FALSE}
+library("class")
+varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
+## Model for training predictions
+knn_mod <- knn(train = data[train_ids , varnames], 
+               test = data[train_ids , varnames], 
+               cl = as.factor(data[train_ids, "major"]), 
+               k = 100, use.all = TRUE, prob = TRUE)
+## Need to obtain predicted probability for second class
+knn_preds_train <- ifelse(
+  knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
+save(knn_preds_train, file = "knn_preds_train_item")
+## Model for testing predictions
+knn_mod <- knn(train = data[train_ids , varnames], 
+               test = data[test_ids , varnames], 
+               cl = as.factor(data[train_ids, "major"]), 
+               k = 100, use.all = TRUE, prob = TRUE)
+knn_preds_test <- ifelse(
+  knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
+save(knn_preds_test, file = "knn_preds_test_item")
+```
+
+```{r, echo=FALSE}
+load("knn_preds_train_item.Rda")
+load("knn_preds_test_item.Rda")
+```
+
+
+
+
+
+#### Comparing predictive accuracy
+
+Again, we computed pseudo-$R^2$ values for each of the fitted models: 
+
+```{r echo=FALSE, message = FALSE, warning=FALSE, fig.width=8, fig.height=3.5}
+## Gather results
+preds_train <- data.frame(bm_preds_train = rep(mean(train_y), times = length(train_ids)), 
+                          glm_preds_train, gam_preds_train,
+                          ct_preds_train, pr_preds_train, gb_preds_train,
+                          rf_preds_train, knn_preds_train)
+preds_test <- data.frame(bm_preds_test = rep(mean(train_y), times = length(test_ids)),
+                          glm_preds_test, gam_preds_test,
+                          ct_preds_test, pr_preds_test, gb_preds_test, 
+                         rf_preds_test, knn_preds_test)
+results <- data.frame(
+  AUC_train = sapply(preds_train, function(x) auc(train_y, x)),
+  AUC_test = sapply(preds_test, function(x) auc(test_y, x)),
+  Brier_train = sapply(preds_train, function(x) mean((train_y - x)^2)),
+  Brier_test = sapply(preds_test, function(x) mean((test_y - x)^2)))
+results$R2_train <- 1 - results$Brier_train / results$Brier_train[1]
+results$R2_test <- 1 - results$Brier_test / results$Brier_test[1]
+rownames(results) <- c("chance", "(penalized)\nGLM", "Smoothing\nsplines (GAM)", 
+                       "tree", "PRE", 
+                       "Boosted\nensemble", "Random\nforest", "kNN")
+#round(results, digits = 4)
+tmp_subscales <- tmp
+
+tmp <- data.frame(
+  R2 = c(results$R2_train[-1], results$R2_test[-1]),
+  SE = c(sapply((preds_train[,-1] - train_y)^2, 
+                function(x) sd(x)/(sqrt(nrow(preds_train))*results$Brier_train[1])),
+          sapply((preds_test[,-1] - test_y)^2, 
+                function(x) sd(x)/(sqrt(nrow(preds_test))*results$Brier_test[1]))),
+  data = rep(c("train", "test"), each = nrow(results)-1), 
+  method = factor(rep(rownames(results)[-1]))
+)
+tmp$method <- factor(tmp$method, c("(penalized)\nGLM", "Smoothing\nsplines (GAM)", 
+                       "tree", "PRE", "Boosted\nensemble", "Random\nforest", "kNN"))
+
+
+## Plot results
+p <- ggplot(tmp, aes(x = method, y = R2)) +
+  geom_point(aes(color = data, fill = data), 
+    stat = "identity", 
+           position = position_dodge(0.4)) + 
+  xlab("") + ylab("Pseudo R squared") + theme(legend.title = element_blank()) +
+  scale_color_manual(values = c("#0073C2FF", "#EFC000FF")) +
+  scale_fill_manual(values = c("#0073C2FF", "#EFC000FF")) + 
+  geom_errorbar(aes(color=data, ymin = R2-1.96*SE, 
+                    ymax = R2+1.96*SE), 
+                width = .2, position = position_dodge(0.4))
+p
+#xtable(results)
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+## How do the means and variances of the predicted values behave between methods?
+colnames(preds_train) <- colnames(preds_test) <- c("BM", "GLM", "GAM", "tree", "PRE", "GBM", "RF", "kNN")
+
+par(mfrow = c(1,2))
+
+boxplot(preds_train)
+abline(mean(train_y), 0, col = "red")
+boxplot(preds_test)
+abline(mean(test_y), 0, col = "red")
+
+plot(sapply(preds_train, mean), main = "Mean of predictions (training data)",
+     ylim = c(0.192, 0.2))
+abline(mean(train_y), 0, col = "red")
+plot(sapply(preds_test, mean), main = "Mean of predictions (test data)",
+     ylim = c(0.192, 0.2))
+abline(mean(test_y), 0, col = "red")
+
+plot(sapply(preds_train, sd), main = "Mean of predictions (training data)",
+     ylim = c(0, 0.3))
+abline(var(train_y), 0, col = "red")
+plot(sapply(preds_test, sd), main = "Mean of predictions (test data)",
+     ylim = c(0, 0.3))
+abline(var(test_y), 0, col = "red")
+```
+
+```{r, echo=FALSE}
+tmp <- results[-1, -(1:2)]
+colnames(tmp) <- c("Brier train", "Brier test", "R2 train", "R2 test")
+rownames(tmp) <- c("(penalized) GLM", "GAM", "tree", "PRE", "GBM", "RF", "kNN")
+round(tmp, digits = 4)
+```
+
+Using item instead of scale scores yielded a substantial (about 50\%) increase in variance explained. Again, best performance on the test data was obtained with the boosted tree ensemble. This time, it was followed by the prediction rule ensemble, then the generalized additive model, logistic regression, random forest, $k$ nearest neighbours, and finally the decision tree.
+
+The graph adds to our earlier take-aways as follows:
+
+1. With a larger number of predictors, differences in performance between the methods become more pronounced, but the penalized logistic regression is not substantially, nor significantly outperformed by more sophisticated methods.
+
+2. With a larger number of predictors, the difference in performance on training and test data becomes more pronounced. The higher dimensionality seems to have created more room for overfitting, even for methods with powerful built-in overfitting control.
+
+3. Like in the subscale analyses, we see that methods incorporating linear main effects (logistic regression, smoothing splines, prediction rule ensembles) appear less susceptible to overfitting. The more flexible methods (single decision tree, $k$ nearest neighbours, boosted ensemble and random forest) appear more susceptible to overfitting.
+
+
+
+
+# Discussion
+
+Our conclusions can be succinctly summarized as: It is difficult to outperform logistic regression. Linear main effects models (i.e., GLMs) tend to capture most of the explainable variance. This finding corresponds to a range of previous studies noting a lack of (substantial or significant) benefit of sophisticated machine learning methods over (penalized) regression, in prediction problems from psychology [@ElleyMcDo20; @WebbyCohe20; @Perl13; @LittyCook21] and medicine [@ChriyJie19; @GraveyNieb20; @NusoyTham20; @LynayDenn20; @DesayWang20]. 
+
+Sophisticated methods can only improve upon linear main-effects models by capturing more nuanced non-linearities and interactions. Almost by definition, these effects are of smaller size. Capturing these smaller, more nuanced effects comes at the price of an increased tendency to overfit. To relibaly approximate small effects, much larger sample sizes are needed. Even if sophisticated methods outperform simpler methods like logistic regression in terms of predictive accuracy on test data, their tendency to overfit and their black-box nature may make them less suited for increasing scientific understanding, and/or making influential decisions about individuals (e.g., clinical, selection settings). 
+
+Perhaps GAMs and PREs may provide the most steady improvement on (penalized) GLMs. They are essentially GLMs with added flexibility for capturing non-linearities, but provide robust overfitting control and also retain interpretability. Especially GAMs may provide the 'best of both worlds': They provide the flexibility of modern statistical learning, robust overfitting control and allow for performing statistical inference. Flexible machine-learning methods especially fall short in terms of the latter, which limits their use for increasing scientific understanding.
+
+Our finding that item scores can provide better predictive accuracy than subscale scores corresponds to previous studies [e.g., @SeebyMott18; @StewyMott21]. As also noted by @Yark20, a (very) large number of item scores will outperform any predictive model fitted on subscale scores, given large enough sample size. At the same time, a handful of subscale scores is easier to interpret and use than hundreds of personality items. Also, with smaller samples (e.g., $N = 300$ or 500), including prior knowledge about the subscale structure, through the use of subscale or factor scores, may likely improve predictive accuracy [@RooiyKarcUR].
+
+Big-data applications involving, for example, image-, video- and text-based analytics may likely exhibit (much) stronger patterns of non-linearity and interaction than the analytic example presented here. More sophisticated methods like deep neural networks may even be called for in such applications. However, similar rules of sampling and statistics apply in such applications: The more complex the patterns that we want to capture, the larger the sample sizes required. Sample size requirements for artificial neural networks by far exceed the sample sizes common in our field [e.g., @AlwoyCran18]. 
+
+Furthermore, in image classification, rather arbitrary image characteristics can easily lead neural nets to misclassify images [@SzegyZare14, AlcoyLi19, HendyZhao21]. This has been attributed to the extreme non-linearity of deep neural networks, but it is likely largely due to the high dimensionality of image data [@GoodyShle15]. High dimensionality yields great flexibility for any algorithms to adopt to chance or irrelevant characteristics of images, and this may be worse for highly flexible and non-linear algorithms. For example, with MRI data, scanner effects are substantial [@GlocyRobi19]. That is, it is relatively easy for an algorithm to identify subjects that were put in the same scanner. This will lead to inflated estimates of predictive accuracy and invalid conclusion when, for example, we are interested in predicting who suffers from a neuro-degenerative disease, but the patients and controls in a study were scanned with different machines. While evaluating predictive accuracy in the study data, the model may appear to be able to discriminate between patients and controls, while in fact it can discriminate well between subjects put in different scanners. The number of irrelevant characteristics that an algorithm may be using for prediction increases fast with increasing dimension. 
+
+There is no doubt that image, text, audio, video and sensor-based data (will) provide novel ways of assessing psychological traits [@GillyRutl21; @BoydyPasc20]. Their relatively unobtrusiveness also opens up new avenues for assessment. At the same time, the unobtrusiveness brings ethical risks. Furthermore, the focus of machine learning on predictive accuracy on unseen observations is beneficial for the field of assessment. We should, however, guard against a blind focus on maximizing predictive accuracy on test observations, as this disregards two important issues:
+
+* Data points analysed in e.g., research settings or forecasting competitions will generally differ from the data points that the predictive model will be applied to in practice. These differences may be subtle in relatively closed, low-stakes systems, like online recommender systems. But much of psychological assessment is focused on offline, out-of-lab human behavior, often with high stakes. Generalizing research findings to the real world remains difficult; external validity has not become irrelevant all of a sudden. Gains in predictive accuracy in controlled research settings may be swamped by practical aspects of data problems, like population drift, measurement error, ethics (interpretability) and costs (of data collection) [@Hand06; @Efro20; @LuijyGroe19; @Raut20; @FokkySmit15].  
+
+* From both an ethical and scientific perspective, validity has become more (not less!) important with new and bigger sources of data. A blind focus on predictive validity leads to black-box assessment procedures with limited content, internal and construct validity. For opening the black box, there is an important role for the field of psychological assessment and psychometrics. Not only by applying our existing theory, evidence and methods, but also by continually improving, adopting and developing them [@BleiyHopw19; @TayyWoo20; @AlexyMulf20; @IlieyGrei19].  
+
+Finally, although modern statistical prediction methods have certainly improved our ability to predict, attribution and interpretation have not become easier. Attribution (assigning significance to individual predictors) requires strong individual predictors and large sample sizes [@Efro20]. This task only becomes more difficult when datasets contain increasing numbers of predictors with modest effects. The task also becomes more difficult with sophisticated prediction methods, that can capture increasingly nuanced non-linear and interaction effects. A range of interpretation tools for black box models have been proposed (variable importances, LIME, Shapley values, SHAP). However, the accuracy of their explanations cannot be quantified [@RossyHugh17; @CarvyPere19], and their inner workings pose another black box to most users, resulting in misinterpretation and misuse [@Rudi19; @KauryNori20; @KennyFord21; @WaayNieu21; @KumayVenk20]. With large numbers of predictors, fitted models become inherently difficult to interpret and black-box interpretation tools are unlikely to help with this.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+\newpage
+# References
+
+<div id="refs"></div>
+
+
+\newpage
+# Appendix A: RIASEC items
+
+| **The following items were rated on a 1-5 scale of how much they would like to perform that task, with the labels 1=Dislike, 3=Neutral, 5=Enjoy:**|
+| ------------------------------------- |
+| R1	Test the quality of parts before shipment |
+| R2	Lay brick or tile |
+| R3	Work on an offshore oil-drilling rig |
+| R4	Assemble electronic parts |
+| R5	Operate a grinding machine in a factory |
+| R6	Fix a broken faucet |
+| R7	Assemble products in a factory |
+| R8	Install flooring in houses |
+| I1	Study the structure of the human body |
+| I2	Study animal behavior |
+| I3	Do research on plants or animals |
+| I4	Develop a new medical treatment or procedure |
+| I5	Conduct biological research |
+| I6	Study whales and other types of marine life |
+| I7	Work in a biology lab |
+| I8	Make a map of the bottom of an ocean |
+| A1	Conduct a musical choir |
+| A2	Direct a play |
+| A3	Design artwork for magazines |
+| A4	Write a song |
+| A5	Write books or plays |
+| A6	Play a musical instrument |
+| A7	Perform stunts for a movie or television show |
+| A8	Design sets for plays |
+| S1	Give career guidance to people |
+| S2	Do volunteer work at a non-profit organization |
+| S3	Help people who have problems with drugs or alcohol |
+| S4	Teach an individual an exercise routine |
+| S5	Help people with family-related problems |
+| S6	Supervise the activities of children at a camp |
+| S7	Teach children how to read |
+| S8	Help elderly people with their daily activities |
+| E1	Sell restaurant franchises to individuals |
+| E2	Sell merchandise at a department store |
+| E3	Manage the operations of a hotel |
+| E4	Operate a beauty salon or barber shop |
+| E5	Manage a department within a large company |
+| E6	Manage a clothing store |
+| E7	Sell houses |
+| E8	Run a toy store |
+| C1	Generate the monthly payroll checks for an office |
+| C2	Inventory supplies using a hand-held computer | 
+| C3	Use a computer program to generate customer bills |
+| C4	Maintain employee records |
+| C5	Compute and record statistical and other numerical data |
+| C6	Operate a calculator |
+| C7	Handle customers' bank transactions |
+| C8	Keep shipping and receiving records |
+
+\newpage
+# Appendix B: univariate distributions and correlations between subscales
+
+```{r echo = FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=4.8}
+par(mfrow = c(2, 3))
+for (i in c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")) {
+  dens <- density(data[ , i])
+  plot(dens, main = "", xlab = i)
+  polygon(dens, col="lightblue", border="black")  
+}
+round(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]), digits = 3L)
+library("pROC")
+library("xtable")
+tab <- xtable(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]),
+       caption = "Correlations between potential predictor variables.",
+       align = c("r", "c", "c", "c", "c", "c", "c"), digits = 3L)
+#print(tab, type = "html", file = "cor_table.html")
+```

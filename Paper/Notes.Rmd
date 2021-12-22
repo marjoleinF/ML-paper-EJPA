@@ -1,0 +1,128 @@
+---
+title: "Untitled"
+author: "Marjolein Fokkema"
+date: "6-12-2021"
+output: word_document
+---
+
+# Miscellaneous
+
+Efron describes the three tasks that regression modeling has been occupied with in the 20th centuty: the _prediction_ of new cases, the _estimation_ of regression surfaces,and the assignment of significance to individual predictors, or _attribution_.
+
+Efron calls neural nets, deep learning, boosting, support vector machines, random forests 'pure prediction algorithms'.
+
+Estimation: Learn as much as possible from the regression surface form the data.
+
+EJPA: 1950-2000: 12 papers mention cross validation; 2010-2020 48 papers mention cross validation.
+
+
+
+
+
+
+### EJPA papers with "machine learning"
+
+@DoreyGrei20 write an EJPA editorial on algorithms for short scale construction. They provide an example using ACO (ant colony optimization): 
+
+"As with all new technologies, the question arises whether algorithm-based item selection is just a fancy gimmick or in fact a powerful alternative to traditional approaches for improving psychological assessment tools." 
+
+"As this example regarding ACO demonstrates, algorithms are useful in test construction and can eliminate some of the rather cumbersome parts. However, they do not reduce the knowledge and skills needed on behalf of the scale developer - in fact, the opposite is the case. Researchers need to have profound knowledge of psychometric properties and the specification of measurement models in CFA and must choose the optimization criteria wisely. In addition to such statistical knowledge, a solid understanding of the construct to be assessed is indispensable in order to evaluate the scales produced by the algorithms."
+
+"Of course, scale construction will never solely rely on automatic algorithms (and for good reasons as outlined above), but they can be an interesting addition to existing procedures and they have the potential to add further value to papers published in EJPA."
+
+@IlieyGrei19: 
+
+"We are sure that psychologists ask themselves this very question, comparing psychological tests with competing technology-driven computer algorithms. Inevitably, with a zeal that also shows frustration, a number of critiques are advanced regarding the latter – among others, the fact that computerized prediction algorithms habitually lack interpretability (Liem et al., 2018), are shallow, and have a limited capacity for transfer and generalization, struggle with integration of prior knowledge, and so forth (Marcus, 2019). And while these points can sometimes also be made against classical testing, we have to acknowledge the habitual struggle of modern psychology to leave empiricism behind and opt for theoretically sound (or at least defendable) predictive models."
+
+
+Wiernik, B. M., Ones, D. S., Marlin, B. M., Giordano, C., Dilchert, S., Mercado, B. K., ... & al'Absi, M. (2020). Using mobile sensors to study personality dynamics. European Journal of Psychological Assessment.
+
+
+Without doubt, image, text, audio, video and sensor-based data provide new ways of assessing psychological traits [@GillyRutl21, @BoydyPasc20]. The relatively unobtrusive way in which this is becoming possible may offer great promise for developing new ways of psychological assessment. At the same time, unobtrusiveness brings ethical risks. The focus of machine learning on predictive accuracy on unseen observations is beneficial for the field of assessment. Often, however, it may turn into a somewhat blind focus on maximizing predictive accuracy on test observations. This disregards two important issues:
+
+Data points analysed in e.g., forecasting competitions but also scientific research will generally differ from the data points that the predictive model will be applied to in practice. These differences may be subtle in relatively closed systems, with relatively low stakes, like online recommender systems. But much of psychological assessment is focused on offline,our-of-lab human behavior, and with often higher stakes. Care should thus always be taken when generalizing research findings to the real world. Gains in predictive accuracy in controlled research settings may be swamped by practical aspects of data problems, like population drift, measurement error, a need for interpretability and the cost of data    
+
+
+
+
+### European Journal of Personality had a special issue on big data and machine learning:
+
+@Raut20: "... why go through the trouble of getting all that difficult-to-sample and perhaps ethically complicated data (from mobile sensing, digital footprints, wearables, etc.) when – eventually – we will have an algorithm try to approximate the self-report as best as it can? It would have been easier to just sample that self-report (if it is really what we are interested in)."
+
+@AlexyMulf20:
+
+"two recent meta‐analyses have been conducted to estimate correlations between social media digital trace data and traditional Big Five questionnaires (Azucar, Marengo, & Settanni, 2018; Settanni, Azucar, & Marengo, 2018). Meta‐analytic estimates suggest that correlations between digital trace data and measures of personality range from .29 to .40 across the Big Five personality traits,"
+
+"Although using machine learning and big data to predict scores on the Big Five is useful, there is a much more extensive and continuing need to understand convergent and discriminant patterns involving machine learning models and personality‐relevant data within a much larger nomological net of psychological constructs (Campbell & Fiske, 1959). Related to this need, additional research could also pursue three key questions about big data: (i) whether they yield unique personality‐relevant variance; (ii) whether they provide incremental prediction of school, organizational, and life outcomes above traditional Big Five measures (Roberts, Kuncel, Shiner, Caspi, & Goldberg, 2007); and (iii) whether this incremental prediction can be attributed to personality and/or to other constructs. [...] whether additional personality insights actually result from big data seems to remain fertile investigative soil, for example, how have the clustering and/or predictive algorithms involving big data improved our understanding of personality? And how does an improved understanding of  personality  translate  into  people’s  functioning  and well‐being in their daily lives at work, school, and home?"
+
+"Coupled with the rational/conceptual approach of expert rating is the empirical approach of applying the nomological network (Cronbach & Meehl, 1955), meaning that perhaps we can 'back into' personality constructs by demonstrating sensible big data patterns of convergent and discriminant validity. Of course, such work is easier said than done, as all this presumes that machine learning algorithms and data at least lean towards being interpretable. Perhaps that leaning will become even stronger as data scientists understand that construct validity remains very important (Bleidorn & Hop-wood, 2019; Tay, Woo, Hickman, & Saef, 2020) - perhaps even more important than ever before given the nature of the data."
+
+@BoydyPasc20 go a little crazy in their review on conceptualizing personality through big behavioral data:
+
+"With big data and behavioural assessment, we have the potential to witness the confluence of situated, seamlessly interacting psychological processes, forming an inclusive, dynamic, multiangle view of personality. However, big behavioural data come hand in hand with important ethical considerations, and our emerging ability to create a 'personality panopticon' requires careful and thoughtful navigation."
+
+
+Some authors incorrectly argue that more modern algorithms would not "succumbing to collinearity" (e.g., @StacyParg20). For traditional and more modern statistical learning, multicollinearity is only a problem for explanation and attribution, while it is beneficial for prediction. We also see this in traditional regression models: Multicollinearity inflates standard errors, mostly. For prediction, it is not so problematic. Even if coefficients become somehwat unstable (because if a coefficient of one variable increases, the coefficients of a correlated variable should decrease), often any weighted sum of predictors will do a similar job at prediction. It is the standard errors that get very large under multicollineary, because it is difficult to attribute the effect to this, or to that specific variable. 
+
+In their review of ML used to advance personality assessment and theory, @BleiyHopw19 indicate that we know little about what aspects of personality digital records measure. They suggest more attention should be devoted to content and construct validity, and they liken the use of digital records as personality measures to development of the MMPI.
+
+They indicate severe issues with discriminant validity, citing Park et al. (2015) which showed that the intercorrelations among different traits are significantly higher when  measured  with  MLPA  than  self-report  scales. For conscientiousness and agreeableness, the  discriminant  correlations  even  exceeded  the  scales' convergent correlations. 
+
+
+@HarayVaid20 present findings from a large smartphone‐based sensing study (N = 633) characterizing individual differences in sensed behavioural patterns (physical activity, social behaviour, and smartphone use) and these to Big Five dimensions.
+
+"Controlling for the effects of age and sex, the Big Fivetraits were significantly associated with six of the nine be-havioural tendencies we studied here, explaining 1% to 7% of the variance in the daily behavioural tendencies."
+
+They report interesting associations between changes in self-reported personality and sensed activity. Interestingly, to analyze such associations, traditional correlation analyses and multilevel models sufficed:
+
+Daily agreeableness and neuroticism states were not associated with the physical activity, social, or mobile phone use behaviours engaged in per day.
+
+"People reported to be more extraverted on days when they spent less time stationary, more time walking, were around more and longer conversations, and spent less time using their mobile phone."
+
+"People reported to be more conscientious on days when they spent less time stationary, more time walking, and spent less time using the phone."
+
+"People reported to be more open on days when they spent less time moving in general, but more time walking."
+
+
+@RuegyStie20: sample of 1765 students, "We explored the relationships between Big Five personality states and data from smartphone sensors and usage logs. On the basis of the existing literature, we first compiled a set of behavioural and situational indicators, which are potentially related to personality states. We then applied them on an experience sampling data set containing 5748 personality state responses that are self-assessments of 30 minutes timeframes and corresponding smartphone data. We used machine learning analyses to investigate the predictability of personality states from the set of indicators. The results showed that only for extraversion , smartphone data (specifically, ambient noise level) were informative beyond what could be predicted based on time and day of the week alone."
+
+@MullyPete20 Student sample of N = 1765 to Investigate the Relationships Between Mobility Behaviours and Indicators ofSubjective Well-Being using Smartphone-Based Experience Sampling and GPSTracking. "Specifically, we show that the placespeople visit on a daily basis and the way in which people movethrough their environment are directly associated with bothmore enduring subjective well-being measures such asdepression and loneliness and more momentary measures,such as anxiety, stress, and affect." It should be noted that these correlations are very modest, none exceeding .15.
+
+@SchoyParg20 measured circadian patterns using smartphone sensing data. Sample was about 500 university student. Correlations of about .10 - .20 were found between personality and day-night patterns.
+
+@DanvySbar20 had data on 963 participants, to analyze social dynamics in times of change; they were going through separation from a partner. Electronic audio recording were collected over the course of three days. Predictors were transformation of the time spend talking: 7 were computed, 5 were used in prediction analyses: three-day averages of percentage of time spent socializing, Transformed time socializing, percentage of time socializing in extended bouts,Number of extended bouts, Longest extended bout. Elastic net was used for prediction. The cross-validated R squared was zero for all Big Five scales, except for neuroticism where R2 of 0.09 was obtained.  
+
+@TackyBara20 is a follow-up from @DanvySbar20. They sampled recordings over three days for each participant (N=462) to obtain more precise and generalizable effect estimates of the association between Big Five scores and actual behaviour, in this case talking to another person. They included four samples; @DanvySbar20 was one. They constructed a bunch of behaviorally coded variables and text-analytically coded variables. They conclude "The mean significant effect for all traits had a magnitude of $.11 < |r| < .16$. This suggests that personality plays out in small ways across a wide variety of domains, with few distinct, large associations with daily behaviours and linguistic styles." It is interesting to note that even the strongest (training sample) correlation found in the study is much lower than the R2 obtained in @DanvySbar20.
+
+
+@HaleyRoek20: "To sample situations that are psychologically arousing in daily life, we implemented an experience sampling strategy in which 82 Dutch young adults (Mage = 20.73) were triggered based on random time intervals and based on physiological skin conductance scores across a period of 5 days. When triggered, participants had to fill in short surveys on affect, situational characteristics and event characteristics on their smartphone. We found theoretically expected relationships between the skin conductance signal on the one hand and self-reported arousal and positive energy (e.g. energetic and enthusiastic) on the other hand, although effect sizes were small." They used multilevel models in MPlus.
+
+
+
+### Explainable ML and AI
+
+[TODO: Complex methods may *capture* non-linear subtleties in the associations between predictors and response, but because they are essentially a black box, they do not help us to interpret these subtleties.] 
+
+A major disadvantage of highly flexible ML models (e.g., random forests, support vector machines, deep neural networks) is their lack of interpretability. Lack of interpretability goes hand in hand with flexibility. Methods that allow for capturing complex associations between predictors and response and including many predictor variables, effectively become black boxes. This is problematic from several perspectives: It is difficult to increase our knowledge about real-world phenomena from black boxes, and use of black-box prediction algorithm in for example selection psychology may introduce or exacerbate systematic discrimination.
+
+There is an ever expanding literature and range of methods being developed to 'explain' the predictions of black-box ML and AI methods. Perhaps the first interpretational tools for black-box methods were partial dependence plots, first proposed by @Frie01, and variable importance measures first proposed in the original random forests paper by @Brei01. In (regularized) GLMs, an individual predictor variable's contribution to the model's predictions can be described by a single coefficient. In generalized additive models, the contribution of a predictor with a non-linear effect is already more difficult to quantify and visualize, but relatively straightforward because of their additivity. For black-box models like random forests, support vector machines and deep neural networks, large amounts of information are necessarily discarded when the complexities of the model must be plotted on a page, or quantified in a single value of importance [cite plotmo package Milborrow].
+
+It is interesting to note that the use of sophisticated methods for prediction has fueled the interest in explanation of these predictions. A wealth of tools for explaining the predictions of any predictive model has been developed. While these methods provide various means for quantifying and visualizing the effect of individual predictor variables on the *predicted value of the response*, they do not provide a means for doing inference. It is very well possible that a given predictor is used for computing predictions, while in fact it has no effect on the response.
+
+
+
+
+
+### Further
+
+@Hand06: More sophisticated methods can only bring marginal gains in accuracy. Practical aspects of data problem may make these gains illusory. @Hand06 and @Holt93
+
+@YarkyWest17: Benefit of statistical learning is increased focus on prediction instead of explanation. One cannot explain (develop a causal theory) if that theory does not predict phenomena in the real world. However, need ever-increasing sample sizes to detect ever more nuanced effects.
+
+Mention paper of Mark: Doing prediction with SEM now possible; incorporating knowledge about measurement model is beneficial for prediction.
+
+@RooiyPrat19: correction for attenuation due to unreliability in fact worsens predictive accuracy.
+
+EU data protection laws prescribe explainability of influential decisions made about individuals. 
+
+Variable importance measures are unstable; many different measures all return a different value. ‘Explanation’ tools (LIME, Shapley values) even worse. 
