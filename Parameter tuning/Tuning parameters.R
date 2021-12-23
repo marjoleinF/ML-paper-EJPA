@@ -235,7 +235,7 @@ load("rfFit.Rda")
 ggplot(rfFit) + scale_x_continuous(trans="log")
 
 ## Items
-rfGrid_i <-  expand.grid(mtry = 2*(2:10), 
+rfGrid_i <-  expand.grid(mtry = 2*(1:5), 
                          min.node.size = c(10000, 5000, 2500, 1000, 750, 500, 250),
                          splitrule = "gini")
 x <- data[train_ids, paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)]
@@ -251,7 +251,7 @@ which(rfFit_i$results$Kappa == max(rfFit_i$results$Kappa))
 which(rfFit_i$results$Acc == max(rfFit_i$results$Acc))
 rfFit_i$bestTune
 ##     mtry splitrule min.node.size
-## 50    18      gini           250
+## 50    10      gini           250
 ggplot(rfFit_i) + scale_x_continuous(trans="log")
 
 

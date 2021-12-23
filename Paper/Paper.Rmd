@@ -518,7 +518,7 @@ The results indicate that best performance on the test data was obtained with th
 
 From the graph, we obtain three key take-aways:
 
-1. None of the methods performs significantly worse or better than any of the other methods.
+1. On the test data, none of the methods performs significantly worse or better than any of the other methods.
 
 2. The difference between training and test performance increases with increasing flexibility. The methods that can incorporate linear main effects (logistic regression, smoothing splines, prediction rule ensembles) show the smallest difference in performance on training and test data. These methods thus appear less likely to overfit. Especially the generalized additive model appears to provide good interpretability as well as accuracy, and good overfitting control.
 
@@ -578,7 +578,7 @@ set.seed(42)
 varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
 rf_form <- formula(paste("major ~", paste(varnames, collapse = "+")))
 rf <- ranger(rf_form, data = data[train_ids , ], probability = TRUE, 
-             mtry = 6L, min.node.size = 250, importance = "permutation")
+             mtry = 10L, min.node.size = 250, importance = "permutation")
 save(rf, file = "RF_items.Rda")
 ```
 
