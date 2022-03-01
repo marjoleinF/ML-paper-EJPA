@@ -1,0 +1,624 @@
+---
+title: "Replication scripts - Parameter tuning"
+bibliography: paper.bib
+biblio-style: "apalike"
+csl: apa.csl
+output: 
+  pdf_document:
+    number_sections: true
+header-includes:
+    - \usepackage{setspace}
+---
+
+\onehalfspacing
+
+# Introduction
+
+All analyses were performed in **`R`** [version `r paste0(R.Version()$major, ".", R.Version()$minor)`, @R21] We fitted (penalized) logistic regression models using **`R`** package **``glmnet``** [version `r packageVersion("glmnet")`, @FrieyHast10]; generalized additive models (GAMs) with smoothing splines suing pacakge **``mgcv``** [version `r packageVersion("mgcv")`, @Wood17]; conditional inference trees using package **``partykit``** [version `r packageVersion("partykit")`, @HothyZeil15; @HothyHorn06]; gradient boosted tree ensembles using package **``gbm``** [version `r packageVersion("gbm")`, @GreeyBoeh20]; random forests using package **``ranger``** [version `r packageVersion("ranger")`, @WrigyZieg17]; prediction rule ensembles using package **``pre``** [version `r packageVersion("pre")`, @Fokk20]; $k$ nearest neighbours using package **``class``** [version `r packageVersion("class")`, @VeneyRipl02].
+
+We tuned the model-fitting parameters for all models using resampling and cross validation (CV) on the training dataset. For tuning the parameters of random forests, boosted tree ensembles and prediction rule ensembles, we used package **``caret``** [version `r packageVersion("caret")`, @Kuhn21]. For tuning the parameters of conditional inference trees and $k$ nearest neighbours, we wrote custom code; we tuned the penalized regression models using function `cv.glmnet` from package **`glmnet`**. 
+
+We did not tune the parameters of the GAMs with smoothing splines, because we expected the defaults to work well out of the box. We simply employed the defaults of thin-plate regression splines and generalized cross validation method to fit the smoothing splines. This provides built-in regularization of the wigglyness, without the need for choosing an optimal value for penalty or tuning parameters. For smaller samples, restricted maximum likelihood (REML) would be preferred. For the analyses using the items as predictors, we set the number of basis functions of the thin-plate regression splines to four, instead of the default of eight, because the item responses have only five possible values; increasing the number of basis functions would yield an unidentified model. Furthermore, because of the larger number of predictors, and the benefit of penalization observed in the logistic regression, we also applied a penalty to the linear part of each smoothing spline function, so that some items can be completely eliminated from the model.
+
+The remainder of this document is structured as follows: Section 2 provides the code used in data preparation. Section 3 provides the code and output of the cross validation of model parameters (subsection 3.1 for (penalized) logistic regressions; subsection 3.2 for random forests; subsection 3.3 for boosted tree ensembles; subsection 3.4 for prediction rule ensembles; subsection 3.5 for conditional inference trees; subsection 3.6 for *k* nearest neighbours). Section 4 provides version info about R and all packages used. Section 5 provides the references.
+
+
+# Data preparation
+
+The data can be downloaded as a .csv file (contained in a .zip file) from https://openpsychometrics.org/_rawdata/, or more specifically: http://openpsychometrics.org/_rawdata/RIASEC_data12Dec2018.zip.
+
+```{r}
+data <- read.delim("data.csv", header = TRUE)
+```
+
+Items are scored 1-5, thus 0s are assumed to be missing values:
+
+```{r}
+# sapply(data[ , 1:48], table)
+data[ , 1:48][sapply(data[ , 1:48], function(x) x == 0)] <- NA
+data <- data[complete.cases(data[ , 1:48]), ]
+# sapply(data[ , 1:48], table)
+```
+
+We select participants who completed a university degree only:
+
+```{r}
+data <- data[data$education >= 3, ]
+```
+
+The variable `major` contains the answer to the question: "If you attended a university, what was your major (e.g. psychology, English, civil engineering)?". We code it as a binary factor, indiciating whether the respondent did take psychology as a major, or not. The variable contains several typos, which we take into account when constructing the binary factor:
+
+```{r}
+# table(data$major)
+psych_ids <- rowSums(sapply(c("psych", "psyhcology", "psycotherapy", "couns", 
+                              "behavior", "behaviour", "neuro"),
+                            function(x) grepl(x, data$major, ignore.case = TRUE)))
+anim_ids <- grepl("anim", data$major, ignore.case = TRUE) ## exclude animal psych
+data$major <- factor(ifelse(psych_ids > 0, "psychology", "other"))
+data$major[anim_ids > 0 & psych_ids > 0] <- "other"
+```
+
+We create identifiers to separate the dataset into 75% training and 25% test observations:
+
+```{r}
+set.seed(42)
+test_ids <- sample(1:nrow(data), ceiling(nrow(data)/4))
+train_ids <- which(!1:nrow(data) %in% test_ids)
+train_y <- as.numeric(data$major)[train_ids] - 1
+test_y <- as.numeric(data$major)[test_ids] - 1
+```
+
+Finally, we compute RIASEC scale scores by summing the item responses:
+
+```{r}
+data$Real <- rowSums(data[ , paste0("R", 1:8)])
+data$Inve <- rowSums(data[ , paste0("I", 1:8)])
+data$Arti <- rowSums(data[ , paste0("A", 1:8)])
+data$Soci <- rowSums(data[ , paste0("S", 1:8)])
+data$Ente <- rowSums(data[ , paste0("E", 1:8)])
+data$Conv <- rowSums(data[ , paste0("C", 1:8)])
+```
+
+\newpage
+# Cross validation of parameters
+
+## (Penalized) Logistic Regression
+
+```{r, warning=FALSE, message=FALSE}
+## Adapt plotting function:
+library("glmnet")
+plot.cv.glmnet <- function (x, sign.lambda = 1, cex = .7, main = "") {
+  cvobj = x
+  xlab = expression(Log(lambda))
+  if (sign.lambda < 0) 
+    xlab = paste("-", xlab, sep = "")
+  plot.args = list(x = sign.lambda * log(cvobj$lambda), y = cvobj$cvm, 
+                   ylim = range(cvobj$cvup, cvobj$cvlo), xlab = xlab, ylab = cvobj$name, 
+                   type = "n", cex = cex, cex.lab = cex, cex.main = cex, cex.axis = cex,
+                   main = main)
+  do.call("plot", plot.args)
+  glmnet:::error.bars(sign.lambda * log(cvobj$lambda), cvobj$cvup, cvobj$cvlo, 
+                      width = 0.01, col = "darkgrey", cex = cex)
+  points(sign.lambda * log(cvobj$lambda), cvobj$cvm, pch = 20, 
+         col = "red", cex = cex)
+  axis(side = 3, at = sign.lambda * log(cvobj$lambda), labels = paste(cvobj$nz), 
+       tick = FALSE, line = 0, cex.axis = cex)
+  abline(v = sign.lambda * log(cvobj$lambda.min), lty = 3)
+  abline(v = sign.lambda * log(cvobj$lambda.1se), lty = 3)
+  invisible()
+}
+```
+
+```{r eval=FALSE}
+library("glmnet")
+```
+
+```{r eval=FALSE}
+## Lasso scale scores
+varnames <- c("Real", "Inve", "Arti", "Soci", "Ente", "Conv")
+X <- as.matrix(data[train_ids, varnames])
+set.seed(42)
+l1 <- cv.glmnet(X, train_y, alpha = 1, family = "binomial")
+lambda_l1 <- l1$lambda
+## cv.glmnet() does not include lambda=0 by default, so need to include manually
+set.seed(42)
+l1 <- cv.glmnet(X, train_y, alpha = 1, family = "binomial",
+                   lambda = c(lambda_l1, 0))
+
+## Ridge scale scores
+set.seed(42)
+l2 <- cv.glmnet(X, train_y, alpha = 0, family = "binomial")
+lambda_l2 <- l2$lambda
+set.seed(42)
+l2 <- cv.glmnet(X, train_y, alpha = 0, lambda = c(lambda_l2, 0), family = "binomial")
+
+```
+
+
+```{r, eval=FALSE, echo=FALSE}
+save(l1, file = "L1 scale scores.Rda")
+save(l2, file = "L2 scale scores.Rda")
+```
+
+```{r, echo=FALSE}
+load("L1 scale scores.Rda")
+load("L2 scale scores.Rda")
+```
+
+```{r, fig.width=7, fig.height=3}
+## Plot and print results
+par(mfrow = c(1, 2))
+plot(l1, cex = .7, main = "lasso subscales")
+plot(l2, cex = .7, main = "ridge subscales")
+l1$lambda.min
+l1$lambda.1se
+l2$lambda.min
+l2$lambda.1se
+```
+
+```{r, eval= FALSE}
+## Items
+varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
+X <- as.matrix(data[train_ids, varnames])
+
+## Lasso
+set.seed(42)
+l1 <- cv.glmnet(X, train_y, alpha = 1, family = "binomial")
+lambda_l1 <- l1$lambda
+set.seed(42)
+l1 <- cv.glmnet(X, train_y, alpha = 1, family = "binomial",
+                lambda = c(lambda_l1, 0))
+
+## Ridge
+set.seed(42)
+l2 <- cv.glmnet(X, train_y, alpha = 0, family = "binomial")
+lambda_l2 <- l2$lambda
+set.seed(42)
+l2 <- cv.glmnet(X, train_y, alpha = 0, lambda = c(lambda_l2, 0), family = "binomial")
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(l1, file = "L1 item scores.Rda")
+save(l2, file = "L2 item scores.Rda")
+```
+
+```{r, echo=FALSE}
+load("L1 item scores.Rda")
+load("L2 item scores.Rda")
+```
+
+```{r, fig.width=7, fig.height=3}
+## Plot and print results
+par(mfrow = c(1, 2))
+plot(l1, cex = .7, main = "lasso items")
+plot(l2, cex = .7, main = "ridge items")
+l1$lambda.min
+l1$lambda.1se
+l2$lambda.min
+l2$lambda.1se
+l1$cvm[which(l1$lambda.min == l1$lambda)]
+l2$cvm[which(l2$lambda.min == l2$lambda)]
+```
+
+
+
+
+## Random Forest
+
+Parameters for gradient boosting, random forests and prediction rule ensembles were tuned using package **`caret`**.
+
+```{r, warning=FALSE, message=FALSE}
+## Load library, set up custom functions
+library("caret")
+library("ggplot2")
+BigSummary <- function (data, lev = NULL, model = NULL) {
+  brscore <- try(mean((data[, lev[2]] - ifelse(data$obs == lev[2], 1, 0)) ^ 2),
+                 silent = TRUE)
+  rocObject <- try(pROC::roc(ifelse(data$obs == lev[2], 1, 0), data[, lev[2]],
+                             direction = "<", quiet = TRUE), silent = TRUE)
+  if (inherits(brscore, "try-error")) brscore <- NA
+  rocAUC <- if (inherits(rocObject, "try-error")) {
+    NA
+  } else {
+    rocObject$auc
+  }
+  tmp <- unlist(e1071::classAgreement(table(data$obs,
+                                            data$pred)))[c("diag", "kappa")]
+  out <- c(Acc = tmp[[1]],
+           Kappa = tmp[[2]],
+           AUCROC = rocAUC,
+           Brier = brscore)
+  out
+}
+fitControl <- trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 1,
+                           ## Estimate class probabilities:
+                           classProbs = TRUE,
+                           ## Evaluate performance using 
+                           ## the following function:
+                           summaryFunction = BigSummary,
+                           verboseIter = TRUE)
+```
+
+
+
+
+```{r, eval=FALSE}
+## Subscales 
+rfGrid <-  expand.grid(mtry = c(2:6), 
+                       min.node.size = c(10000, 5000, 2500, 1000, 750, 500),
+                       splitrule = "gini")
+set.seed(825)
+rfFit <- train(major ~ Real + Inve + Arti + Soci + Ente + Conv, 
+               data = data[train_ids, ], method = "ranger", trControl = fitControl, 
+               tuneGrid = rfGrid, metric = "Brier", maximize = FALSE)
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(rfFit, file = "rfFit.Rda")
+```
+
+```{r, echo=FALSE}
+load("rfFit.Rda")
+```
+
+```{r fig.width=7, fig.height=2.5, warning=FALSE, message=FALSE}
+## Print and plot results
+ggplot(rfFit) + scale_x_continuous(trans="log") + theme_gray(base_size=9) +
+  scale_x_continuous(trans = "log", breaks = c(10000, 5000, 2500, 1000, 750, 500))
+rfFit$bestTune
+```
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE}
+## Items
+rfGrid_i <-  expand.grid(mtry = 2*(1:5), 
+                         min.node.size = c(10000, 5000, 2500, 1000, 750, 500),
+                         splitrule = "gini")
+x <- data[train_ids, paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)]
+y <- data$major[train_ids]
+set.seed(825)
+rfFit_i <- train(x = x, y = y, method = "ranger", trControl = fitControl, 
+                 tuneGrid = rfGrid_i, metric = "Brier", maximize = FALSE)
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(rfFit_i, file = "rfFit_i.Rda")
+```
+
+```{r, echo=FALSE}
+load("rfFit_i.Rda")
+```
+
+```{r fig.width=7, fig.height=2.5, message=FALSE, warning=FALSE}
+## Print and plot results
+ggplot(rfFit_i) + scale_x_continuous(trans="log") + theme_gray(base_size=9) +
+  scale_x_continuous(trans = "log", breaks = c(10000, 5000, 2500, 1000, 750, 500))
+rfFit_i$bestTune
+```
+
+
+
+## Gradient Tree Boosting
+
+Gradient boosting is one of the top prediction approaches. Many forecasting competitions have been won by using gradient boosting. To obtain good performance with boosting, careful tuning of the model-fitting parameters is necessary. The most important parameters are tree size, the number of trees in the ensemble and the shrinkage or learning rate. Tree size (or interaction depth) determines the highest degree of interactions that can be captured by the tree in the ensembles. The learning rate (or shrinkage) parameter reflects the weight that is attributed to the predictions of each previous tree, when fitting the current tree.
+
+```{r, eval=FALSE}
+## Subscales
+gbmGrid <-  expand.grid(interaction.depth = 1:5, 
+                        n.trees = c((1:10)*50, 500+(1:10)*100, 1500+(1:4)*250), 
+                        shrinkage = c(0.001, 0.01, 0.1),
+                        n.minobsinnode = 20)
+set.seed(825)
+gbmFit <- train(major ~ Real + Inve + Arti + Soci + Ente + Conv, 
+                data = data[train_ids, ], 
+                 method = "gbm", 
+                 trControl = fitControl, 
+                 tuneGrid = gbmGrid,
+                 metric = "Brier",
+                 maximize = FALSE)
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(gbmFit, file = "gbmFit.Rda")
+```
+
+```{r, echo=FALSE}
+load("gbmFit.Rda")
+```
+
+```{r fig.width=7, fig.height=3}
+## Print and plot results
+ggplot(gbmFit, size = 2) + theme_gray(base_size=9) +
+  scale_x_continuous(trans = "log", breaks = c(10000, 5000, 2500, 1000, 750, 500))
+gbmFit$bestTune
+```
+
+
+```{r, eval=FALSE}
+## Items
+x <- data[train_ids, paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)]
+y <- data$major[train_ids]
+gbmGrid_i <-  expand.grid(interaction.depth = 1:5, 
+                        n.trees = c((1:10)*50, 500+(1:10)*100, 1500+(1:8)*250), 
+                        shrinkage = c(0.001, 0.01, 0.1),
+                        n.minobsinnode = 20)
+set.seed(825)
+gbmFit_i <- train(x = x, y = y, 
+                method = "gbm", 
+                trControl = fitControl, 
+                tuneGrid = gbmGrid_i,
+                metric = "Brier",
+                maximize = FALSE)
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(gbmFit_i, file = "gbmFit_i.Rda")
+```
+
+```{r, echo=FALSE}
+load("gbmFit_i.Rda")
+n.trees <- c((1:10)*50, 500+(1:10)*100, 1500+(1:8)*250)
+```
+
+```{r fig.width=7, fig.height=3}
+## Print and plot results
+ggplot(gbmFit_i) + theme_gray(base_size=9) +
+  scale_x_continuous(trans = "log", breaks = c(50, 100, 250, 500, 1000, 2500))
+gbmFit_i$bestTune
+```
+
+
+
+## Prediction Rule Ensembling
+
+```{r, eval=FALSE}
+## Subscales
+preGrid <- getModelInfo("pre")[[1]]$grid(
+  learnrate = c(.01, .05, .1))
+set.seed(825)
+preFit <- train(major ~ Real + Inve + Arti + Soci + Ente + Conv, 
+                data = data[train_ids, ], 
+                method = "pre", 
+                trControl = fitControl, 
+                tuneGrid = preGrid,
+                metric = "Brier",
+                maximize = FALSE)
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(preFit, file = "preFit.Rda")
+```
+
+```{r, echo=FALSE}
+load("preFit.Rda")
+```
+
+```{r fig.width=3, fig.height=2}
+## Print and plot results
+ggplot(preFit) + theme_gray(base_size=9)
+preFit$bestTune
+```
+
+```{r, eval=FALSE}
+## items
+varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
+pr_form <- formula(paste("major ~", paste(varnames, collapse = "+")))
+set.seed(825)
+preFit_i <- train(pr_form, 
+                  data = data[train_ids, ], 
+                  method = "pre", 
+                  trControl = fitControl, 
+                  tuneGrid = preGrid,
+                  metric = "Brier",
+                  maximize = FALSE)
+```
+
+
+```{r, eval=FALSE, echo=FALSE}
+save(preFit_i, file = "gbmFit.Rda")
+```
+
+```{r, echo=FALSE}
+load("preFit_i.Rda")
+```
+
+```{r fig.width=3, fig.height=2}
+## Print and plot results
+ggplot(preFit_i) + theme_gray(base_size=9)
+preFit_i$bestTune
+```
+
+
+
+## Conditional Inference Tree
+
+For conditional inference trees and $k$ nearest neighbours, we wrote custom code for tuning the parameters:
+
+```{r, eval = FALSE}
+library("partykit")
+dat <- data[train_ids, ]
+
+## Subscales
+varnames <- c("Real", "Inve", "Arti", "Soci", "Ente", "Conv")
+ct_form <- formula(paste("major ~", paste(varnames, collapse = "+")))
+set.seed(42)
+fold_ids <- sample(1:10, size = nrow(dat), replace = TRUE)
+ct_preds <- data.frame(matrix(rep(NA, times = nrow(dat)*15), nrow = nrow(dat)))
+names(ct_preds) <- paste0("m", 1:15)
+
+set.seed(43)
+for (i in 1:10) {
+  cat("Fold", i, ". ")
+  for (j in 1:15) {
+    ct <- ctree(ct_form, data = dat[fold_ids != i, ], maxdepth = j)
+    ct_preds[fold_ids == i, paste0("m", j)] <- predict(
+      ct, type = "prob", newdata = dat[fold_ids == i, ])[ , "psychology"]
+  }
+}
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(ct_preds, file = "ct_preds_s.Rda")
+```
+
+```{r, echo=FALSE}
+load("ct_preds_s.Rda")
+```
+
+```{r fig.width=5, fig.height=3}
+## Print and plot results
+br_ct <- sapply(ct_preds, function(x) mean((x - train_y)^2))
+br_ct_se <- sapply(ct_preds, function(x) sd((x - train_y)^2)/sqrt(length(train_ids)))
+plot(br_ct, xlab = "maxdepth", ylab = "Brier score", main = "ctree subscales",
+     ylim = c(0.143, 0.157), cex = .7, cex.axis = .7, cex.main = .7, cex.lab = .7)
+arrows(x0 = 1:15, y0 = br_ct - br_ct_se, y1 = br_ct + br_ct_se, length = 0)
+which(br_ct == min(br_ct))
+```
+
+
+```{r, eval=FALSE}
+## Items
+varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
+ct_form <- formula(paste("major ~", paste(varnames, collapse = "+")))
+set.seed(42)
+fold_ids <- sample(1:10, size = nrow(dat), replace = TRUE)
+ct_preds <- data.frame(matrix(rep(NA, times = nrow(dat)*15), nrow = nrow(dat)))
+names(ct_preds) <- paste0("m", 1:15)
+
+set.seed(43)
+for (i in 1:10) {
+  cat("Fold", i, ". ")
+  for (j in 1:15) {
+    ct <- ctree(ct_form, data = dat[fold_ids != i, ], maxdepth = j)
+    ct_preds[fold_ids == i, paste0("m", j)] <- predict(
+      ct, type = "prob", newdata = dat[fold_ids == i, ])[ , "psychology"]
+  }
+}
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(ct_preds, file = "ct_preds_i.Rda")
+```
+
+```{r, echo=FALSE}
+load("ct_preds_i.Rda")
+```
+
+```{r fig.width=5, fig.height=3}
+## Print and plot results
+br_ct <- sapply(ct_preds, function(x) mean((x - train_y)^2))
+br_ct_se <- sapply(ct_preds, function(x) sd((x - train_y)^2)/sqrt(length(train_ids)))
+plot(br_ct, xlab = "maxdepth", ylab = "Brier score", main = "ctree items",
+     ylim = c(0.138, 0.147), cex = .7, cex.axis = .7, cex.main = .7, cex.lab = .7)
+arrows(x0 = 1:15, y0 = br_ct - br_ct_se, y1 = br_ct + br_ct_se, length = 0)
+which(br_ct == min(br_ct))
+```
+
+
+
+
+## $k$ Nearest Neighbours
+
+```{r, eval = FALSE}
+library("class")
+
+## Subscales
+varnames <- c("Real", "Inve", "Arti", "Soci", "Ente", "Conv")
+set.seed(42)
+fold_ids <- sample(1:10, size = nrow(dat), replace = TRUE)
+names(ct_preds) <- paste0("m", 1:15)
+k <- c(1L, 10L, 25L, 50L, 75L, 100L, 150L, 200L, 250L, 300L, 400L, 500L, 600L)
+knn_preds <- data.frame(matrix(rep(NA, times = nrow(dat)*length(k)), 
+                                   nrow = nrow(dat)))
+names(knn_preds) <- as.character(k)
+set.seed(43)
+for (i in 1:10) {
+  cat("Fold", i, ". ")
+  for (j in k) {
+    try(
+      knn_mod <- knn(dat[fold_ids != i, varnames], dat[fold_ids == i, varnames], 
+          cl = as.factor(dat[fold_ids != i, "major"]), 
+          k = j, use.all = TRUE, prob = TRUE)
+    )
+    ## Need to obtain predicted probability for second class
+    knn_preds[fold_ids == i, as.character(j)] <- ifelse(
+      knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
+  }
+}
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(knn_preds, file = "knn_preds_s.Rda")
+```
+
+```{r, echo=FALSE}
+k <- c(1L, 10L, 25L, 50L, 75L, 100L, 150L, 200L, 250L, 300L, 400L, 500L, 600L)
+load("knn_preds_s.Rda")
+```
+
+```{r fig.width=5, fig.height=3}
+## Print and plot results
+br_knn <- sapply(knn_preds, function(x) mean((x - train_y)^2))
+br_knn_se <- sapply(knn_preds, function(x) sd((x - train_y)^2)/sqrt(length(train_ids)))
+plot(k, br_knn, main = "kNN subscales", ylab = "Brier score",
+     cex = .7, cex.axis = .7, cex.main = .7, cex.lab = .7)
+arrows(x0 = k, y0 = br_knn - br_knn_se, y1 = br_knn + br_knn_se, length = 0)
+which(br_knn == min(br_knn))
+```
+
+```{r, eval=FALSE}
+## Items
+varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
+set.seed(42)
+fold_ids <- sample(1:10, size = nrow(dat), replace = TRUE)
+k <- c(1L, 10L, 25L, 50L, 75L, 100L, 150L, 200L, 250L, 300L, 400L, 500L, 600L)
+knn_preds <- data.frame(matrix(rep(NA, times = nrow(dat)*length(k)), 
+                               nrow = nrow(dat)))
+names(knn_preds) <- as.character(k)
+
+set.seed(43)
+for (i in 1:10) {
+  cat("Fold", i, ". ")
+  for (j in k) {
+    try(
+      knn_mod <- knn(dat[fold_ids != i, varnames], dat[fold_ids == i, varnames], 
+                     cl = as.factor(dat[fold_ids != i, "major"]), 
+                     k = j, use.all = TRUE, prob = TRUE)
+    )
+    ## Need to obtain predicted probability for second class
+    knn_preds[fold_ids == i, as.character(j)] <- ifelse(
+      knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
+  }
+}
+```
+
+```{r, eval=FALSE, echo=FALSE}
+save(knn_preds, file = "knn_preds_i.Rda")
+```
+
+```{r, echo=FALSE}
+load("knn_preds_i.Rda")
+k <- c(1L, 10L, 25L, 50L, 75L, 100L, 150L, 200L, 250L, 300L, 400L, 500L, 600L)
+```
+
+```{r fig.width=5, fig.height=3}
+## Print and plot results
+br_knn <- sapply(knn_preds, function(x) mean((x - train_y)^2))
+br_knn_se <- sapply(knn_preds, function(x) sd((x - train_y)^2)/sqrt(length(train_ids)))
+plot(k, br_knn, main = "kNN items", ylab = "Brier score",
+     cex = .7, cex.axis = .7, cex.main = .7, cex.lab = .7)
+arrows(x0 = k, y0 = br_knn - br_knn_se, y1 = br_knn + br_knn_se, length = 0)
+which(br_knn == min(br_knn))
+```
+
+
+\newpage
+# R version and package info
+
+```{r}
+sessionInfo()
+```
+
+\newpage
+# References
