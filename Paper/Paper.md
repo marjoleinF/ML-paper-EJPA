@@ -8,10 +8,7 @@ output:
     keep_md: TRUE
 ---
 
-```{r setup, include=FALSE}
-library("knitr")
-knitr::opts_chunk$set(dpi=300)
-```
+
 
 
 
@@ -83,85 +80,28 @@ Readers interested in replicating our analyses will find our annotated code and 
 
 ### Dataset
 
-```{r, echo=FALSE}
-#########################
-##
-## Prepare data
-##
-data <- read.delim("data.csv", header = TRUE)
 
-## Items should be scored 1-5, 0 may be missings
-data[ , 1:48][sapply(data[ , 1:48], function(x) x == 0)] <- NA
-data <- data[complete.cases(data[ , 1:48]), ]
-
-## Select only university students
-data <- data[data$education >= 3, ]
-# table(data$major)
-psych_ids <- rowSums(sapply(c("psych", "psyhcology", "psycotherapy", "couns", 
-                              "behavior", "behaviour", "neuro"),
-                            function(x) grepl(x, data$major, ignore.case = TRUE)))
-anim_ids <- grepl("anim", data$major, ignore.case = TRUE) ## exclude animal psych
-data$major <- factor(ifelse(psych_ids > 0, "psychology", "other"))
-data$major[anim_ids > 0 & psych_ids > 0] <- "other"
-
-set.seed(42)
-test_ids <- sample(1:nrow(data), ceiling(nrow(data)/4))
-train_ids <- which(!1:nrow(data) %in% test_ids)
-train_y <- as.numeric(data$major)[train_ids] - 1
-test_y <- as.numeric(data$major)[test_ids] - 1
-
-data$Real <- rowSums(data[ , paste0("R", 1:8)])
-data$Inve <- rowSums(data[ , paste0("I", 1:8)])
-data$Arti <- rowSums(data[ , paste0("A", 1:8)])
-data$Soci <- rowSums(data[ , paste0("S", 1:8)])
-data$Ente <- rowSums(data[ , paste0("E", 1:8)])
-data$Conv <- rowSums(data[ , paste0("C", 1:8)])
-```
 
 We use a dataset from the Open Psychometrics Project (https://openpsychometrics.org/_rawdata/). Data were collected through their website from 2015 to 2018. Respondents answered items on vocational preferences, personality and sociodemographic characteristics. The sample likely does not represent a random sample from a well-defined population, which would normally be required for evaluating a test's validity.  
 
 We investigate predictive validity of the RIASEC vocational preferences scales [@LiaoyArms08]. The RIASEC uses six occupational categories from Holland's Occupational Themes [@Holl59] theory: Realistic (R), Investigative (I), Artistic (A), Social (S), Enterprising (E), and Conventional (C). There are 8 items for each category, each describing a task (e.g., R6: "Fix a broken faucet" or I2: "Study animal behavior"), to which respondents answer on a 1-5 scale, with 1=Dislike, 3=Neutral, 5=Enjoy. The items are presented in Appendix A. The research question from an assessment perspective is whether the RIASEC scores can be used to predict the university major completed. Such evidence could support the use of the scale in applied settings; moreover, the results could inform decision rules.
 
-From the full dataset, we selected participants who completed at least a university degree, yielding a sample of *N =* `r format(nrow(data), nsmall = 0, big.mark = ",")` observations. As the criterion we take a binary variable, indicating whether respondents majored in Psychology (`r format(unname(round(100*table(data$major)[2] / nrow(data), digits = 2)), nsmall = 0, big.mark = ",")`\%), or in a different topic (`r format(unname(round(100*table(data$major)[1] / nrow(data), digits = 2)), nsmall = 0, big.mark = ",")`\%). Further descriptive statistics of the sample are presented in Appendix B. 
+From the full dataset, we selected participants who completed at least a university degree, yielding a sample of *N =* 55,593 observations. As the criterion we take a binary variable, indicating whether respondents majored in Psychology (19.42\%), or in a different topic (80.58\%). Further descriptive statistics of the sample are presented in Appendix B. 
 
 
-```{r eval = FALSE, echo=FALSE}
-## Correlations between TIPI items
-round(cor(data[ , paste0("TIPI", 1:10)]), digits = 3L)
-## Recode
-data[ , paste0("TIPI", 2*(1:5))] <- 8 - data[ , paste0("TIPI", 2*(1:5))] 
-data$extrav <- data$TIPI1 + data$TIPI6
-data$altru <- data$TIPI2 + data$TIPI7
-data$consc <- data$TIPI3 + data$TIPI8
-data$neurot <- data$TIPI4 + data$TIPI9
-data$open <- data$TIPI5 + data$TIPI10
-```
 
 
-```{r echo = FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=4.8}
-# par(mfrow = c(2, 3))
-# for (i in c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")) {
-#   dens <- density(data[ , i])
-#   plot(dens, main = "", xlab = i)
-#   polygon(dens, col="lightblue", border="black")  
-# }
-# round(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]), digits = 3L)
-library("pROC")
-library("xtable")
-# tab <- xtable(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]),
-#        caption = "Correlations between potential predictor variables.",
-#        align = c("r", "c", "c", "c", "c", "c", "c"), digits = 3L)
-# print(tab, type = "html", file = "cor_table.html")
-```
+
+
 
 
 ### Model fitting and evaluation
 
 We fitted a range of traditional and more recent (ML/AI) methods to model the relation between the RIASEC scores and the criterion. This will show the magnitude of differences in performance such algorithms typically yield. Also, it exemplifies the researcher degrees of freedom in such cases and it is thus important to use separate data for fitting and evaluation of the models.  
 
-We separated the data into 75\% training observations and 25\% test observations. Our training sample thus consists of `r format(length(train_ids), nsmall = 0, big.mark = ",")` respondents, of which `r format(unname(round(100*table(data$major[train_ids])[2] / length(train_ids), digits = 2)), nsmall = 0, big.mark = ",")`\% majored in psychology. Our test sample consisted of `r format(length(test_ids), nsmall = 0, big.mark = ",")` respondents, of which `r format(unname(round(100*table(data$major[test_ids])[2] / length(test_ids), digits = 2)), nsmall = 0, big.mark = ",")`\% majored in psychology. Other train and test sample sizes may sometimes be preferred, or $k$-fold CV. Considering the current sample size, however, we do not expect the results to be very sensitive to this choice. 
+We separated the data into 75\% training observations and 25\% test observations. Our training sample thus consists of 41,694 respondents, of which 19.46\% majored in psychology. Our test sample consisted of 13,899 respondents, of which 19.3\% majored in psychology. Other train and test sample sizes may sometimes be preferred, or $k$-fold CV. Considering the current sample size, however, we do not expect the results to be very sensitive to this choice. 
 
-All analyses were performed in **`R`** [version `r paste0(R.Version()$major, ".", R.Version()$minor)`, @R21]. We tuned the model-fitting parameters for all models using resampling and cross validation (CV) on the training observations. We did *not* tune the parameters of the generalized additive models (GAMs), because we expected the defaults to work well out of the box. The specific packages used, as well as the code and results of tuning and fitting the models are provided in the ESM. 
+All analyses were performed in **`R`** [version 4.1.0, @R21]. We tuned the model-fitting parameters for all models using resampling and cross validation (CV) on the training observations. We did *not* tune the parameters of the generalized additive models (GAMs), because we expected the defaults to work well out of the box. The specific packages used, as well as the code and results of tuning and fitting the models are provided in the ESM. 
 
 We evaluated predictive accuracy of the fitted models by computing the Brier score on test observations. The use of accuracy measures derived from the confusion matrix of actual and predicted classes, like the misclassification error, sensitivity (or recall), positive predictive value (or precision) are pervasive in the machine learning literature. However, these measures disregard the quality of predicted probabilities from a fitted model and we therefore recommend against their use for evaluating predictive accuracy. Methods for predicting a binary outcome should not only provide a predicted class, but also a predicted probability to quantify the uncertainty of the classification. To evaluate performance, the quality of this probability forecast should thus be evaluated [@GneiyRaft07]. 
 
@@ -169,17 +109,14 @@ The Brier score is the mean squared error of the predicted probabilities:
 
 $$\frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{p}_i)^2$$
 
-Where $y_i$ is the observed outcome for observation $i$, taking a value of 0 or 1; $\hat{p}_i$ is the model's predicted probability. We computed Brier scores on training as well as on test observations; thus $N$ can be taken to be the training or the test sample size. A Brier score equal to the variance of $y$ indicates performance no better than chance (in the current dataset, the variance was `r round(prop.table(table(train_y))[2], digits = 4)` for training and `r round(prop.table(table(test_y))[2], digits = 4)` for test data). To obtain a pseudo-$R^2$ measure, we take 1 minus the Brier score divided by the variance of $y$, which takes values between 0 (indicating performance no better than chance) and 1 (indicating perfect accuracy). 
+Where $y_i$ is the observed outcome for observation $i$, taking a value of 0 or 1; $\hat{p}_i$ is the model's predicted probability. We computed Brier scores on training as well as on test observations; thus $N$ can be taken to be the training or the test sample size. A Brier score equal to the variance of $y$ indicates performance no better than chance (in the current dataset, the variance was 0.1946 for training and 0.193 for test data). To obtain a pseudo-$R^2$ measure, we take 1 minus the Brier score divided by the variance of $y$, which takes values between 0 (indicating performance no better than chance) and 1 (indicating perfect accuracy). 
 
 
 
 
 ## Results
 
-```{r,echo=FALSE}
-varnames_i <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
-varnames_s <- c("R", "I", "A", "S", "E", "C")
-```
+
 
 Considering the two shifts in predictive modeling discussed in the Introduction, we fitted all models twice: Once using subscale scores, once using item scores. This allows us to evaluate whether our conclusions generalize between the two approaches, and to gauge the effect of having a larger pool of predictor variables (which are likely more noisy but possibly more informative of the criterion).
 
@@ -193,23 +130,9 @@ For prediction with item scores, CV indicated optimal performance for a small bu
 
 
 
-```{r echo=FALSE}
-glmod_s <- glm(major ~ Real + Inve + Arti + Soci + Ente + Conv, 
-               data = data[train_ids , ], family = "binomial")
-#summary(glmod_s)
-glm_preds_train_s <- predict(glmod_s, newdata = data[train_ids, ], type = "response")
-glm_preds_test_s <- predict(glmod_s, newdata = data[test_ids, ], type = "response")
-```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-library("glmnet")
-X <- as.matrix(data[train_ids, varnames_i])
-set.seed(42)  
-glmod_i <- glmnet(X, train_y, family = "binomial", alpha = 1, lambda = 0.0003568404)
-glm_preds_train_i <- predict(glmod_i, newx = X, type = "response")
-glm_preds_test_i <- predict(glmod_i, newx = as.matrix(data[test_ids, varnames_i]), 
-                            type = "response")
-```
+
+
 
 
 ### Generalized additive model
@@ -218,23 +141,11 @@ Next we fitted generalized additive models (GAMs) with smoothing splines. Smooth
 
 
 
-```{r, echo=FALSE, eval=FALSE, fig.height=6, fig.width=11, warning=FALSE, message=FALSE}
-library("mgcv")
-gamod_s <- gam(major ~ s(Real) + s(Inve) + s(Arti) + s(Soci) + s(Ente) + s(Conv), 
-               data = data[train_ids , ], family = "binomial")
-save(gamod_s, file = "GAM_subscales.Rda")
-```
+
 
 **Figure 1**  
 *Fitted smoothing spline curves for each of the RIASEC subscales*
-```{r echo=FALSE, fig.width=7, fig.height=4, warning=FALSE, message=FALSE}
-library("mgcv")
-load(file = "GAM_subscales.Rda")
-par(mfrow = c(2, 3))
-plot(gamod_s)
-gam_preds_train_s <- predict(gamod_s, newdata = data[train_ids, ], type = "response")
-gam_preds_test_s <- predict(gamod_s, newdata = data[test_ids, ], type = "response")
-```
+![](Paper_files/figure-docx/unnamed-chunk-8-1.png)<!-- -->
 *Note. * Values on the $y$-axis reflect the effect on the log-odds of having completed a university major in psychology.  
   
   
@@ -242,21 +153,9 @@ The splines fitted to the subscale scores are presented in Figure 1. Similar to 
 
 For the GAM fitted using item scores, we also applied penalization, as this was expected to be beneficial for prediction, as similarly observed in the GLM. We do not depict the fitted curves for space considerations here, but Figures 3 and C1 (ESM) show the $\chi^2$ values per subscale and per item, respectively. The figures indicate very similar effects of the predictors, between the (penalized) GLMs and GAMs.
 
-```{r, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
-library("mgcv")
-#apply(data[train_ids, varnames], 2, table) ## all items have 5 options
-gam_form <- formula(paste0("major ~", paste0("s(", varnames, ", k=4)", collapse = " + ")))
-memory.limit(size = 32000)
-gamod_i <- gam(gam_form, data = data[train_ids , ], family = "binomial", 
-               select = TRUE)
-save(gamod_i, file = "GAM_items.Rda")
-```
 
-```{r, echo=FALSE}
-load("GAM_items.Rda")
-gam_preds_train_i <- predict(gamod_i, newdata = data[train_ids, ], type = "response")
-gam_preds_test_i <- predict(gamod_i, newdata = data[test_ids, ], type = "response")
-```
+
+
 
 We now leave the realm of additive models, and set about fitting models that allow for capturing interaction effects:
 
@@ -271,36 +170,10 @@ For illustration, Figure 2 shows the decision tree fitted to the subscale scores
   
 **Figure 2**  
 *Conditional inference tree pruned to a depth of three*
-```{r, echo=FALSE, fig.height=3.5, fig.width=6.5, warning=FALSE, message=FALSE}
-library("partykit")
-ct_s <- ctree(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ], 
-              maxdepth = 7)
-#myfun <- function(i) {c(
-#  paste("n =", i$n),
-#  format(round(i$distribution[2]/i$n, digits = 3), nsmall = 3)
-#)}
-#ct2 <- as.simpleparty(ct)
-#plot(ct2, tp = node_terminal, tp_args = list(FUN = myfun), gp = gpar(cex = .5))
-ct3 <- ctree(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ], 
-             maxdepth = 3)
-plot(ct3, gp = gpar(cex = .5), ip_args = list(pval = FALSE))
-ct_preds_train_s <- predict(ct_s, type = "prob")[ , "psychology"]
-ct_preds_test_s <- predict(ct_s, newdata = data[test_ids , ], type = "prob")[ , "psychology"]
-```
+![](Paper_files/figure-docx/unnamed-chunk-11-1.png)<!-- -->
 
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-ct_form <- formula(paste("major ~", paste(varnames_i, collapse = "+")))
-ct <- ctree(ct_form, data = data[train_ids , ], maxdepth = 9)
-# myfun <- function(i) {c(
-#   paste("n =", i$n),
-#   format(round(i$distribution[2]/i$n, digits = 3), nsmall = 3)
-# )}
-#ct2 <- as.simpleparty(ct)
-#plot(ct2, tp = node_terminal, tp_args = list(FUN = myfun), gp = gpar(cex = .5))
-ct_preds_train_i <- predict(ct, type = "prob")[ , "psychology"]
-ct_preds_test_i <- predict(ct, newdata = data[test_ids , ], type = "prob")[ , "psychology"]
-```
+
 
 
 Although decision trees are easy to interpret, they suffer more strongly from instability than GLMs and GAMs. With instability, we mean that a small change in the training data can lead to large changes in the resulting model. The cause of this instability partly lies in the rather rough cuts made in the tree. Tree ensembling methods capitalize on this instability. They derive a large number of learners (e.g., trees), each fitted on different versions of the training dataset. Different versions of the training data can be generated, for example, by taking bootstrap samples from the training data, a method also known as bagging. More powerful tree ensembling methods are random forests and boosting. Introductions about tree ensemble methods aimed at psychologists can be found in @StroyMall09 and @MillyLubk16.
@@ -311,42 +184,15 @@ Although decision trees are easy to interpret, they suffer more strongly from in
 The first tree ensemble method we apply to the data is a gradient boosted ensemble. Boosting uses sequential fitting of so-called weak learners to create a strong learner. Weak learners are simple models, that provide predictive accuracy (slightly) better than chance. When boosting trees, we use weak learners in the form of small trees, with only a few splits. Sequential learning means that each consecutive tree is adjusted for the predictions of previous trees. In effect, observations that were well (badly) predicted by previous trees receive less (more) weight when fitting the next tree.
 
 
-```{r,echo=FALSE, eval=FALSE, warning=FALSE, message = FALSE}
-library("gbm")
-set.seed(42)
-gb_s <- gbm(I(as.numeric(major)-1) ~ Real + Inve + Arti + Soci + Ente + Conv, 
-            n.trees = 1100, interaction.depth = 3L, shrinkage = 0.01, 
-            data = data[train_ids , ], )
-save(gb_s, file = "GBM_subscales.Rda")
-```
 
 
-```{r, echo=FALSE, warning=FALSE, message = FALSE}
-library("gbm")
-load("GBM_subscales.Rda")
-gb_preds_train_s <- predict(gb_s, newdata = data[train_ids, ], type = "response")
-gb_preds_test_s <- predict(gb_s, newdata = data[test_ids, ], type = "response")
-```
 
 
-```{r, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
-library("gbm")
-set.seed(42)
-gbm_form <- formula(paste("I(as.numeric(major)-1) ~ ", 
-                          paste(paste0(rep(c("R", "I", "A", "S", "E", "C"), 
-                                           each = 8), 1:8), collapse = "+")))
-gb_i <- gbm(gbm_form, n.trees = 3500, interaction.depth = 5L, shrinkage = 0.01, 
-            data = data[train_ids , ])
-save(gb_i, file = "GBM_items.Rda")
-sum_i <- summary(gb_i, plotit = FALSE, method = permutation.test.gbm)
-save(sum_i, file = "gb_i_summary.Rda")
-```
 
-```{r, echo=FALSE, wanring=FALSE, message=FALSE}
-load("GBM_items.Rda")
-gb_preds_train_i <- predict(gb_i, newdata = data[train_ids, ], type = "response")
-gb_preds_test_i <- predict(gb_i, newdata = data[test_ids, ], type = "response")
-```
+
+
+
+
 
 A disadvantage of decision tree ensembles is their black box nature: While individual trees are generally easy to interpret, an ensemble of trees is impossible for humans to grasp. Therefore, so-called variable importance measures have been developed for interpretation of tree ensembles, which aim to quantify the effect of predictor variable on the predictions of the ensemble. In this paper, we use the permutation importances proposed by Breiman [-@Brei01]. These quantify how much an ensemble's predictive accuracy would be reduced, if the values of each of the predictor variables are randomly shuffled. The variable importances of the fitted gradient boosting ensembles are depicted in Figures 3 and C1 (ESM).
 
@@ -363,36 +209,13 @@ The most characteristic feature of random forests is how it selects variables fo
 The variable importances of the fitted random forests are depicted in Figures 3 and C1 (ESM).
 
 
-```{r echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
-library("ranger")
-set.seed(42)
-rf_s <- ranger(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ],
-                   probability = TRUE, mtry = 3L, min.node.size = 500, 
-             importance = "permutation")
-save(rf_s, file = "RF_subscales.Rda")
-```
 
-```{r echo=FALSE, warning=FALSE, message=FALSE}
-library("ranger")
-load("RF_subscales.Rda")
-rf_preds_train_s <- predict(rf_s, data = data[train_ids, ])$predictions[ , "psychology"]
-rf_preds_test_s <- predict(rf_s, data = data[test_ids, ])$predictions[ , "psychology"]
-```
 
-```{r echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
-set.seed(42)
-varnames <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
-rf_form <- formula(paste("major ~", paste(varnames, collapse = "+")))
-rf_i <- ranger(rf_form, data = data[train_ids , ], probability = TRUE, 
-             mtry = 10L, min.node.size = 500, importance = "permutation")
-save(rf_i, file = "RF_items.Rda")
-```
 
-```{r echo=FALSE, warning=FALSE, message=FALSE}
-load("RF_items.Rda")
-rf_preds_train_i <- predict(rf_i, data = data[train_ids, ])$predictions[ , "psychology"]
-rf_preds_test_i <- predict(rf_i, data = data[test_ids, ])$predictions[ , "psychology"]
-```
+
+
+
+
 
 
 
@@ -404,46 +227,26 @@ PRE applies lasso regression on a dataset consisting of both these rules and the
 
 The PRE we fitted using the subscale scores consisted of 48 rules, providing a great simplification compared to the $>500$ trees of the boosted ensemble and random forest. Note that the current dataset is exceptionally large, which tends to result in longer rule lists when only predictive accuracy is optimized, because very large samples allow for capturing highly nuanced effects. In Table 1, the six most important rules are shown.
  
-```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
-library("pre")
-set.seed(42)
-pr_s <- pre(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ], 
-            learnrate = .05)
-save(pr_s, file = "PRE_subscales.Rda")
-```
+
 
 **Table 1**  
 *Six most important rules in the prediction rule ensemble*
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-library("pre")
-load("PRE_subscales.Rda")
-pr_preds_train_s <- predict(pr_s, type = "response")
-pr_preds_test_s <- predict(pr_s, newdata = data[test_ids , ], type = "response")
-imps <- pre::importance(pr_s, plot=FALSE)
-varimps_pre <- imps$varimps
-imps <- imps$baseimps[1:6, c("description", "coefficient")]
-colnames(imps) <- c("Description", "Coefficient")
-imps$Coefficient <- round(imps$Coefficient, digits = 3)
-kable(imps, row.names = FALSE, align = c("l", "c"))
-``` 
+
+|Description                         | Coefficient |
+|:-----------------------------------|:-----------:|
+|Soci > 27 & Ente <= 31 & Conv <= 30 |    0.182    |
+|Soci > 23 & Ente <= 29 & Real <= 24 |    0.181    |
+|Real > 10 & Soci <= 35              |   -0.175    |
+|Real <= 22 & Soci > 19 & Inve > 18  |    0.138    |
+|Inve > 10 & Real <= 13              |    0.120    |
+|Conv <= 23 & Arti <= 29 & Soci > 21 |    0.112    |
 
 Note that each rule has obtained an estimated coefficient, which are simply logistic regression coefficients: They reflect the expected increase in log-odds if the conditions of the rule apply. PRE also provides variable importance measures, which are presented for the fitted ensembles in Figures 3 and C1 (ESM). An introduction to PRE aimed at psychologists is provided in @FokkyStro20. 
 
 
-```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
-library("pre")
-pr_form <- formula(paste("major ~", paste(varnames_i, collapse = "+")))
-set.seed(42)
-pr_i <- pre(pr_form, data = data[train_ids , ], learnrate = .05,
-            verbose = TRUE, family = "binomial")
-save(pr_i, file = "PRE_items.Rda")
-```
 
-```{r echo=FALSE, warning=FALSE, message=FALSE}
-load("PRE_items.Rda")
-pr_preds_train_i <- predict(pr_i, type = "response")
-pr_preds_test_i <- predict(pr_i, newdata = data[test_ids , ], type = "response")
-```
+
+
 
 
  
@@ -455,60 +258,13 @@ A prime example of a highly flexible method, perhaps the most non-parametric met
 
 kNN has only a single tuning parameter: *k*. With larger values of *k*, the predicted value for a new observation averages over a larger number of observations (neighbours). Thus, higher values of $k$ yield lower variance, but higher bias. Furthermore, because kNN is a fully distance-based method, in which all variables obtain the same weight of 1, the method does not provide *any* measure of effect of individual variables, and we thus do not plot variable contributions for kNN here.
 
-```{r, eval=FALSE, echo=FALSE}
-library("class")
 
-## Model for training predictions
-knn_mod <- knn(train = data[train_ids , varnames_s], 
-               test = data[train_ids , varnames_s], 
-               cl = as.factor(data[train_ids, "major"]), 
-               k = 300, use.all = TRUE, prob = TRUE)
-## Need to obtain predicted probability for second class
-knn_preds_train_s <- ifelse(
-  knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
-save(knn_preds_train_s, file = "knn_preds_train_scales.Rda")
 
-## Model for testing predictions
-knn_mod <- knn(train = data[train_ids , varnames_s], 
-               test = data[test_ids , varnames_s], 
-               cl = as.factor(data[train_ids, "major"]), 
-               k = 300, use.all = TRUE, prob = TRUE)
-knn_preds_test_s <- ifelse(
-  knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
-save(knn_preds_test_s, file = "knn_preds_test_scales.Rda")
-```
 
-```{r, echo=FALSE}
-library("class")
-load("knn_preds_train_scales.Rda")
-load("knn_preds_test_scales.Rda")
-```
 
-```{r echo=FALSE,eval=FALSE}
-library("class")
-## Model for training predictions
-knn_mod <- knn(train = data[train_ids , varnames_i], 
-               test = data[train_ids , varnames_i], 
-               cl = as.factor(data[train_ids, "major"]), 
-               k = 100, use.all = TRUE, prob = TRUE)
-## Need to obtain predicted probability for second class
-knn_preds_train_i <- ifelse(
-  knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
-save(knn_preds_train_i, file = "knn_preds_train_item.Rda")
-## Model for testing predictions
-knn_mod <- knn(train = data[train_ids , varnames_i], 
-               test = data[test_ids , varnames_i], 
-               cl = as.factor(data[train_ids, "major"]), 
-               k = 100, use.all = TRUE, prob = TRUE)
-knn_preds_test <- ifelse(
-  knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
-save(knn_preds_test_i, file = "knn_preds_test_item.Rda")
-```
 
-```{r, echo=FALSE}
-load("knn_preds_train_item.Rda")
-load("knn_preds_test_item.Rda")
-```
+
+
 
 
 
@@ -526,84 +282,7 @@ Figure 3 depicts the variable contributions in the models fitted using RIASEC su
   
 **Figure 3**  
 *Variable contributions for each of the models fitted using RIASEC subscale scores as predictors*
-```{r, echo=FALSE, fig.width=7, fig.height=1.5, warning=FALSE, message=FALSE}
-par(mfrow = c(1, 3))
-par(mar = c(1, 4, 2, 1), mgp = c(1.5, .5, 0), tck = -0.05)
-library("colorspace")
-
-## default par(mar = c(5, 4, 4, 2) + 0.1) with c(bottom, left, top, right) margins
-## default par(mgp = c(3, 1, 0) with c(axis title, axis labels, axis line) margins
-
-## Logistic regression
-plot(coef(glmod_s)[-1], xaxt = "n", ylab = "Estimated coefficient",
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
-     main = "Logistic Regression", cex.main = .7)
-text(coef(glmod_s)[-1], labels = varnames_s, cex = 1, 
-     col = rep(qualitative_hcl(6)), font = 2)
-abline(0, 0, col = "grey")
-
-
-## Generalized additive model
-sum <- summary(gamod_s)
-plot(sqrt(sum$chi.sq), xaxt = "n", ylab = expression(sqrt(chi^2)),
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
-     main = "Generalized Additive Model", cex.main = .7)
-text(sqrt(sum$chi.sq), labels = varnames_s, cex = 1, 
-     col = rep(qualitative_hcl(6)), font = 2)
-#legend("topleft", legend = "GAM", cex = .7, bty = "n")
-
-
-## Conditional inference tree
-ct6 <- cforest(major ~ Real + Inve + Arti + Soci + Ente + Conv, 
-               data = data[train_ids , ], ntree = 1L, mtry = 6,
-               perturb = list(replace = FALSE, fraction = 1L),
-               control = ctree_control(maxdepth = 6))
-imps <- varimp(gettree(ct6), risk = "loglik")
-imps <- imps[c("Real", "Inve", "Arti", "Soci", "Ente", "Conv")]
-plot(sqrt(imps), xaxt = "n", ylab = expression(sqrt(Importance)),
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
-     main = "Tree", cex.main = .7)
-text(sqrt(imps), labels = varnames_s, cex = 1, 
-     col = rep(qualitative_hcl(6)), font = 2)
-#legend("topleft", legend = "Tree", cex = .7, bty = "n")
-
-
-## Gradient boosted ensemble
-sum <- summary(gb_s, plotit = FALSE, method = permutation.test.gbm)
-imps <- sum$rel.inf
-names(imps) <- sum$var
-imps <- imps[c("Real", "Inve", "Arti", "Soci", "Ente", "Conv")]
-plot(sqrt(imps), xaxt = "n", ylab = expression(sqrt(Importance)),
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
-     main = "Gradient Boosted Ensemble", cex.main = .7)
-text(sqrt(imps), labels = varnames_s, cex = 1, 
-     col = rep(qualitative_hcl(6)), font = 2)
-#legend("topleft", legend = "GB", cex = .7, bty = "n")
-
-
-## Random forest
-library("ranger")
-load(file = "RF_subscales.Rda")
-imps <- ranger::importance(rf_s)
-plot(sqrt(imps), xaxt = "n", ylab = expression(sqrt(Importance)),
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
-     main = "Random Forest", cex.main = .7)
-text(sqrt(imps), labels = varnames_s, cex = 1, 
-     col = rep(qualitative_hcl(6)), font = 2)
-#legend("topleft", legend = "RF", cex = 1, bty = "n")
-
-
-## Prediction rule ensemble
-imps <- varimps_pre$imp
-names(imps) <- varimps_pre$varname
-imps <- imps[c("Real", "Inve", "Arti", "Soci", "Ente", "Conv")]
-plot(imps, xaxt = "n", ylab = "Importance",
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
-     cex.main = .7, main = "Prediction Rule Ensemble")
-text(imps, labels = varnames_s, cex = 1, 
-     col = rep(qualitative_hcl(6)), font = 2)
-#legend("topleft", legend = "PRE", cex = 1, bty = "n", text.font = 2)
-```
+![](Paper_files/figure-docx/unnamed-chunk-29-1.png)<!-- -->![](Paper_files/figure-docx/unnamed-chunk-29-2.png)<!-- -->
 *Note.* Coefficients in the logistic regression and importance measures of the prediction rule ensemble are on the scale of standard deviations. Importance measures for the other methods are on the scale of variances; for those methods, the square roots are plotted.  
   
   
@@ -612,99 +291,7 @@ text(imps, labels = varnames_s, cex = 1,
   
 **Figure 4**  
 *Predictive accuracy on train and test observations for each of the models fitted on subscale scores (left panel) and items scores (right panel)*
-```{r echo=FALSE, message = FALSE, warning=FALSE, fig.width=8, fig.height=3.5}
-## Gather results for prediction with subscales
-preds_train <- data.frame(bm_preds_train = rep(mean(train_y), times = length(train_ids)), 
-                          glm_preds_train_s, gam_preds_train_s, 
-                          ct_preds_train_s, pr_preds_train_s, gb_preds_train_s,
-                          rf_preds_train_s, knn_preds_train_s)
-preds_test <- data.frame(bm_preds_test = rep(mean(train_y), times = length(test_ids)),
-                         glm_preds_test_s, gam_preds_test_s, 
-                         ct_preds_test_s, pr_preds_test_s, gb_preds_test_s,
-                         rf_preds_test_s, knn_preds_test_s)
-results <- data.frame(
-  AUC_train = sapply(preds_train, function(x) auc(train_y, x)),
-  AUC_test = sapply(preds_test, function(x) auc(test_y, x)),
-  Brier_train = sapply(preds_train, function(x) mean((train_y - x)^2)),
-  Brier_test = sapply(preds_test, function(x) mean((test_y - x)^2)))
-results$R2_train <- 1 - results$Brier_train / results$Brier_train[1]
-results$R2_test <- 1 - results$Brier_test / results$Brier_test[1]
-rownames(results) <- c("chance", "(penalized)\nGLM", "Smoothing\nsplines", 
-                       "tree", "PRE", "Boosted\nensemble", "Random\nforest", "kNN")
-#round(results, digits = 4)
-#xtable(results)
-
-tmp <- data.frame(
-  R2 = c(results$R2_train[-1], results$R2_test[-1]),
-  SE = c(sapply((preds_train[,-1] - train_y)^2, 
-                function(x) sd(x)/(sqrt(nrow(preds_train))*results$Brier_train[1])),
-         sapply((preds_test[,-1] - test_y)^2, 
-                function(x) sd(x)/(sqrt(nrow(preds_test))*results$Brier_test[1]))),
-  data = rep(c("train", "test"), each = nrow(results)-1), 
-  method = rep(c("GLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"), times = 2))
-tmp$data <- factor(tmp$data, levels = c("train", "test"))
-tmp$method <- factor(tmp$method, levels = c("GLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"))
-
-## Plot results
-library("ggplot2")
-p_subscales <- ggplot(tmp, aes(x = method, y = R2)) +
-  geom_point(aes(color = data, fill = data), 
-             stat = "identity", position = position_dodge(0.4)) + 
-  ggtitle("subscales") + xlab("") + ylab(expression("Pseudo"~R^2)) + 
-  theme(legend.position = "none", plot.title = element_text(size = 11)) +
-  scale_color_manual(values = c("#0073C2FF", "#ff9933")) + ylim(0, 0.25) +
-  scale_fill_manual(values = c("#0073C2FF", "#ff9933")) + 
-  geom_errorbar(aes(color=data, ymin = R2-1.96*SE, ymax = R2+1.96*SE), 
-                width = .2, position = position_dodge(0.4))
-#p_subscales
-
-
-## Gather results for prediction with items
-preds_train <- data.frame(bm_preds_train = rep(mean(train_y), times = length(train_ids)), 
-                          glm_preds_train_i, gam_preds_train_i,
-                          ct_preds_train_i, pr_preds_train_i, gb_preds_train_i,
-                          rf_preds_train_i, knn_preds_train_i)
-preds_test <- data.frame(bm_preds_test = rep(mean(train_y), times = length(test_ids)),
-                          glm_preds_test_i, gam_preds_test_i,
-                          ct_preds_test_i, pr_preds_test_i, gb_preds_test_i, 
-                         rf_preds_test_i, knn_preds_test_i)
-results <- data.frame(
-  AUC_train = sapply(preds_train, function(x) auc(train_y, x)),
-  AUC_test = sapply(preds_test, function(x) auc(test_y, x)),
-  Brier_train = sapply(preds_train, function(x) mean((train_y - x)^2)),
-  Brier_test = sapply(preds_test, function(x) mean((test_y - x)^2)))
-results$R2_train <- 1 - results$Brier_train / results$Brier_train[1]
-results$R2_test <- 1 - results$Brier_test / results$Brier_test[1]
-rownames(results) <- c("chance", "(penalized)\nGLM", "Smoothing\nsplines (GAM)", 
-                       "tree", "PRE", "Boosted\nensemble", "Random\nforest", "kNN")
-#round(results, digits = 4)
-
-tmp <- data.frame(
-  R2 = c(results$R2_train[-1], results$R2_test[-1]),
-  SE = c(sapply((preds_train[,-1] - train_y)^2, 
-                function(x) sd(x)/(sqrt(nrow(preds_train))*results$Brier_train[1])),
-          sapply((preds_test[,-1] - test_y)^2, 
-                function(x) sd(x)/(sqrt(nrow(preds_test))*results$Brier_test[1]))),
-  data = rep(c("train", "test"), each = nrow(results)-1), 
-  method = rep(c("pGLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"), times = 2))
-tmp$data <- factor(tmp$data, levels = c("train", "test"))
-tmp$method <- factor(tmp$method, levels = c("pGLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"))
-
-## Plot results
-p_items <- ggplot(tmp, aes(x = method, y = R2)) +
-  geom_point(aes(color = data, fill = data), 
-    stat = "identity", position = position_dodge(0.4)) + xlab("") + ylab(" ") + 
-  theme(axis.text.y=element_blank(), axis.ticks.y = element_blank(),
-        plot.title = element_text(size = 11), legend.title = element_blank()) +
-  ggtitle("items") + scale_color_manual(values = c("#0073C2FF", "#ff9933")) +
-  scale_fill_manual(values = c("#0073C2FF", "#ff9933")) + ylim(0, .25) +
-  geom_errorbar(aes(color=data, ymin = R2-1.96*SE, ymax = R2+1.96*SE), 
-                width = .2, position = position_dodge(0.4))
-#p_items
-#xtable(results)
-library("gridExtra")
-grid.arrange(p_subscales, p_items, ncol = 2, widths = c(6.75,8))
-```
+![](Paper_files/figure-docx/unnamed-chunk-30-1.png)<!-- -->
 *Note.* (p)GLM = (penalized) logistic regression; GAM = generalized additive model with smoothing splines; PRE = prediction rule ensemble; GBE = gradient boosted tree ensemble; RF = random forest; kNN = k nearest neighbours.  
   
 In Figure 4, pseudo-$R^2$ values on train and test data are depicted with confidence intervals. Note that the confidence intervals for test data are systematically wider than for training data, but this is mostly due to the much larger number of training observations.
@@ -830,40 +417,29 @@ Finally, although modern statistical prediction methods have certainly improved 
 \newpage
 # Appendix B: Uni- and bivariate sample descriptives
 
-```{r, echo = FALSE}
-data$age[data$age > 103] <- NA ## some crazy ages were supplied
-gender_tab <- prop.table(table(data$gender)) ## 0=missing, 1=Male, 2=Female, 3=Other
-marital_tab <- prop.table(table(data$married)) ## 0=missing, 1=Never married, 2=Currently married, 3=Previously married
-urban_tab <- prop.table(table(data$urban)) ## 0=missing, 1=Rural (country side), 2=Suburban, 3=Urban (town, city)
-race_tab <- prop.table(table(data$race)) ## 0=missing, 1=Asian, 2=Arab, 3=Black, 
-## 4=Indigenous Australian / Native American / White, 5=Other (There was a coding mistake resulting in cat 4)
-language_tab <- prop.table(table(data$engnat)) ## 0=missing, 1=Yes, 2=No
-```
 
-The total sample consisted of `r format(nrow(data), nsmall = 0, big.mark = ",")` participants. Mean age was `r format(mean(data$age, na.rm = TRUE), digits = 2, nsmall = 2, big.mark = ",")` (SD = `r format(sd(data$age, na.rm = TRUE), nsmall = 2, digits = 2, big.mark = ",")`). With respect to gender, `r format(100*gender_tab[3], nsmall = 0, digits = 0, big.mark = ",")`% of participants reported female, `r format(100*gender_tab[2], nsmall = 0, digits = 0, big.mark = ",")`% reported male, `r format(100*gender_tab[4], nsmall = 0, digits = 0, big.mark = ",")`% reported "other". With respect to marital status, `r format(100*marital_tab[2], nsmall = 0, digits = 0, big.mark = ",")`% of participants reported being never married, `r format(100*marital_tab[3], nsmall = 0, digits = 0, big.mark = ",")`% reported being currently married, `r format(100*marital_tab[4], nsmall = 0, digits = 0, big.mark = ",")`% reported being previously married. With respect to type of area lived in when a child, `r format(100*urban_tab[2], nsmall = 0, digits = 0, big.mark = ",")`% of participants reported rural, `r format(100*urban_tab[3], nsmall = 0, digits = 0, big.mark = ",")`% reported suburban, `r format(100*urban_tab[4], nsmall = 0, digits = 0, big.mark = ",")`% reported urban. With respect to language, `r format(100*language_tab[2], nsmall = 0, digits = 0, big.mark = ",")`% of participants reported that English is their native language, `r format(100*language_tab[3], nsmall = 0, digits = 0, big.mark = ",")`% reported that English is not their native language. With respect to race, `r format(100*race_tab[2], nsmall = 0, digits = 0, big.mark = ",")`% reported Asian, `r format(100*race_tab[3], nsmall = 0, digits = 0, big.mark = ",")`% reported Arab, `r format(100*race_tab[4], nsmall = 0, digits = 0, big.mark = ",")`% reported Black, `r format(100*race_tab[5], nsmall = 0, digits = 0, big.mark = ",")`% reported White, Native American, or Indigenous Australian (note that these three options were merged due to a coding mistake), and `r format(100*race_tab[1], nsmall = 0, digits = 0, big.mark = ",")`% did not report their race.   
+
+The total sample consisted of 55,593 participants. Mean age was 33.06 (SD = 11.68). With respect to gender, 67% of participants reported female, 32% reported male, 1% reported "other". With respect to marital status, 58% of participants reported being never married, 33% reported being currently married, 8% reported being previously married. With respect to type of area lived in when a child, 22% of participants reported rural, 37% reported suburban, 40% reported urban. With respect to language, 66% of participants reported that English is their native language, 34% reported that English is not their native language. With respect to race, 20% reported Asian, 1% reported Arab, 7% reported Black, 61% reported White, Native American, or Indigenous Australian (note that these three options were merged due to a coding mistake), and 1% did not report their race.   
   
   
 **Figure B1**  
-*Univariate distributions of the RIASEC subscale scores ($N = `r format(nrow(data), nsmall = 0, digits = 0, big.mark = ",")`$)*
-```{r echo = FALSE, warning=FALSE, message=FALSE, fig.width=8, fig.height=4.8}
-par(mfrow = c(2, 3))
-for (i in c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")) {
-  dens <- density(data[ , i])
-  plot(dens, main = "", xlab = i)
-  polygon(dens, col="lightblue", border="black")  
-}
-```
+*Univariate distributions of the RIASEC subscale scores ($N = 55,593$)*
+![](Paper_files/figure-docx/unnamed-chunk-32-1.png)<!-- -->
   
   
   
   
 **Table B1**  
-*Pearson correlations between RIASEC subscale scores ($N = `r format(nrow(data), nsmall = 0, digits = 0, big.mark = ",")`$)*
-```{r, echo=FALSE}
-tab <- round(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]), 
-             digits = 3L)
-kable(tab)
-```
+*Pearson correlations between RIASEC subscale scores ($N = 55,593$)*
+
+|     |  Real|  Inve|   Arti|  Soci|  Ente|   Conv|
+|:----|-----:|-----:|------:|-----:|-----:|------:|
+|Real | 1.000| 0.332|  0.182| 0.049| 0.305|  0.460|
+|Inve | 0.332| 1.000|  0.329| 0.141| 0.016|  0.065|
+|Arti | 0.182| 0.329|  1.000| 0.290| 0.253| -0.056|
+|Soci | 0.049| 0.141|  0.290| 1.000| 0.356|  0.124|
+|Ente | 0.305| 0.016|  0.253| 0.356| 1.000|  0.464|
+|Conv | 0.460| 0.065| -0.056| 0.124| 0.464|  1.000|
 
 
 \newpage
@@ -876,95 +452,4 @@ All methods found items S5 ("I would like to help people with family-related pro
 
 **Figure C1**  
 *Variable contributions for each of the models fitted using RIASEC item scores as predictors*
-```{r, echo=FALSE, fig.width=6, fig.height=8, warning=FALSE, message=FALSE}
-par(mar = c(1.5, 4, 0.2, 2), mgp = c(1.5, .5, 0), tck = -0.05)
-#c(bottom, left, top, right) 
-par(mfrow = c(6, 1))
-
-library("glmnet")
-plot(coef(glmod_i)[-1], xaxt = "n", ylab = "Estimated coefficient",
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
-     main = " ", cex.main = .7)
-text(coef(glmod_i)[-1], labels = varnames_i, cex = .5, 
-     col = rep(qualitative_hcl(6), each = 8), font = 2)
-abline(0, 0, col = "grey")
-legend("topleft", legend = "Penalized logistic regression", cex = .7, bty = "n")
-axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
-     labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
-
-library("mgcv")
-load(file = "GAM_items.Rda")
-sum <- summary(gamod_i)
-plot(sqrt(sum$chi.sq), xaxt = "n", ylab = expression(sqrt(chi^2)), 
-     main = " ", cex.main = .7,
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ")
-text(sqrt(sum$chi.sq), labels = varnames_i, cex = .5, 
-     col = rep(qualitative_hcl(6), each = 8), font = 2)
-legend("topleft", legend = "Generalized Additive Model", cex = .7, bty = "n")
-axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
-     labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
-
-ct6 <- cforest(ct_form, 
-               data = data[train_ids , ], ntree = 1L, mtry = 6,
-               perturb = list(replace = FALSE, fraction = 1L),
-               control = ctree_control(maxdepth = 6))
-imps <- varimp(gettree(ct6), risk = "loglik")
-imp_names <- names(imps)
-imps <- c(imps, rep(0, times = 48 - length(imps)))
-names(imps) <- c(imp_names, varnames_i[!varnames_i %in% imp_names])
-plot(sqrt(imps[varnames_i]), xaxt = "n", ylab = expression(sqrt(Importance)),
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", 
-     main = " ", cex.main = .7)
-text(sqrt(imps[varnames_i]), labels = varnames_i, cex = .5, 
-     col = rep(qualitative_hcl(6), each = 8), font = 2)
-legend("topleft", legend = "Tree", cex = .7, bty = "n")
-axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
-     labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
-
-load(file = "gb_i_summary.Rda")
-imps <- sum_i[match(varnames_i, sum_i$var), ]
-plot(sqrt(imps$rel.inf), xaxt = "n", main = " ",
-     ylab = expression(sqrt(Importance)), cex.main = .7,
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ")
-text(sqrt(imps$rel.inf), labels = imps$var, cex = .5, 
-     col = rep(qualitative_hcl(6), each = 8), font = 2)
-legend("topleft", legend = "Boosted ensemble", cex = .7, bty = "n")
-axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
-     labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
-
-imps <- ranger::importance(rf_i)
-plot(sqrt(imps), xaxt = "n", main = " ",
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ",
-     ylab = expression(sqrt(Importance)), cex.main = .7)
-text(sqrt(imps), labels = names(imps), cex = .5, 
-     col = rep(qualitative_hcl(6), each = 8), font = 2)
-legend("topleft", legend = "Random forest", cex = .7, bty = "n")
-axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
-     labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
-
-imps <- pre::importance(pr_i, cex.axis = .7, plot = FALSE)$varimps
-zero_vars <- varnames_i[!varnames_i %in% imps[ , 1]]
-imps <- rbind(imps, data.frame(varname = zero_vars, 
-                               imp = rep(0, times = length(zero_vars))))
-imps <- imps[match(varnames_i, imps$varname), ]
-plot(imps$imp, xaxt = "n", main = " ",
-     ylab = "Importance",
-     col = "white", cex.lab = .7, cex.axis = .7, xlab = " ", cex.main = .7)
-text(imps$imp, labels = imps$varname, cex = .5, 
-     col = rep(qualitative_hcl(6), each = 8), font = 2)
-legend("topleft", legend = "Prediction rule ensemble", cex = .7, bty = "n")
-axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
-     labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
-```
+![](Paper_files/figure-docx/unnamed-chunk-34-1.png)<!-- -->

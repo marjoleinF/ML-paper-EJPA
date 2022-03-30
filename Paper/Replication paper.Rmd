@@ -1,9 +1,10 @@
 ---
-title: "Replication scripts - Models fitted in main paper"
+title: "Appendix D  \n  \nReplication scripts: Models fitted in main paper"
 bibliography: paper.bib
 biblio-style: "apalike"
 csl: apa.csl
-output: pdf_document
+output: 
+  pdf_document
 header-includes:
     - \usepackage{setspace}
 ---
@@ -16,17 +17,25 @@ library("knitr")
 knitr::opts_chunk$set(dpi=300)
 ```
 
+# Introduction
 
-## Method
+In this Appendix, we present scripts for replicating the results from the main paper. In the [Method](#method) section, packages used are listed and data preparation is shown. In the [Results](#results) section, we show how each of the models in the main document were fit, and how the figures and tables can be replicated. In sections [Appendix B](#appB) and [C](#appC), we show how results, tables and figures from the appendices can be replicated. Finally, the [last section](#references) provides the references.
 
-All analyses were performed in **`R`** [version `r paste0(R.Version()$major, ".", R.Version()$minor)`, @R21] We fitted (penalized) logistic regression models using **`R`** package **``glmnet``** [version `r packageVersion("glmnet")`, @FrieyHast10]; generalized additive models (GAMs) with smoothing splines suing pacakge **``mgcv``** [version `r packageVersion("mgcv")`, @Wood17]; conditional inference trees using package **``partykit``** [version `r packageVersion("partykit")`, @HothyZeil15; @HothyHorn06]; gradient boosted tree ensembles using package **``gbm``** [version `r packageVersion("gbm")`, @GreeyBoeh20]; random forests using package **``ranger``** [version `r packageVersion("ranger")`, @WrigyZieg17]; prediction rule ensembles using package **``pre``** [version `r packageVersion("pre")`, @Fokk20]; $k$ nearest neighbours using package **``class``** [version `r packageVersion("class")`, @VeneyRipl02].
 
-### Dataset
+# Method {#method}
+
+
+All analyses were performed in **`R`** [version `r paste0(R.Version()$major, ".", R.Version()$minor)`, @R21]. We fitted (penalized) logistic regression models using **`R`** package **``glmnet``** [version `r packageVersion("glmnet")`, @FrieyHast10]; generalized additive models (GAMs) with smoothing splines using package **``mgcv``** [version `r packageVersion("mgcv")`, @Wood17]; conditional inference trees using package **``partykit``** [version `r packageVersion("partykit")`, @HothyHorn06]; gradient boosted tree ensembles using package **``gbm``** [version `r packageVersion("gbm")`, @GreeyBoeh20]; random forests using package **``ranger``** [version `r packageVersion("ranger")`, @WrigyZieg17]; prediction rule ensembles using package **``pre``** [version `r packageVersion("pre")`, @Fokk20]; $k$ nearest neighbours using package **``class``** [version `r packageVersion("class")`, @VeneyRipl02].
+
+Appendix E shows our code and results for tuning the parameter settings using cross validation. All parameter settings employed here are based on those results, for most methods. We did not tune the parameters of the GAMs with smoothing splines, because we expected the defaults to work well out of the box. We simply employed the defaults of thin-plate regression splines and generalized cross validation method to fit the smoothing splines. This provides built-in regularization of the wigglyness, without the need for choosing an optimal value for penalty or tuning parameters. For smaller samples, restricted maximum likelihood (REML) would be preferred. For the analyses using the items as predictors, we set the number of basis functions of the thin-plate regression splines to four, instead of the default of eight, because the item responses have only five possible values; increasing the number of basis functions would yield an unidentified model. Furthermore, because of the larger number of predictors, and the benefit of penalization observed in the logistic regression, we also applied a penalty to the linear part of each smoothing spline function, so that some items can be completely eliminated from the model.
+
+
+## Data preparation
 
 ```{r}
 data <- read.delim("data.csv", header = TRUE)
 
-## Items should be scored 1-5, 0 may be missings
+## Items should be scored 1-5, 0s are missings
 data[ , 1:48][sapply(data[ , 1:48], function(x) x == 0)] <- NA
 data <- data[complete.cases(data[ , 1:48]), ]
 
@@ -54,37 +63,31 @@ data$Ente <- rowSums(data[ , paste0("E", 1:8)])
 data$Conv <- rowSums(data[ , paste0("C", 1:8)])
 ```
 
+Sample size:
+
 ```{r}
-format(nrow(data), nsmall = 0, big.mark = ",")
-format(unname(round(100*table(data$major)[2] / nrow(data), digits = 2)), 
-       nsmall = 0, big.mark = ",")
-format(unname(round(100*table(data$major)[1] / nrow(data), digits = 2)), 
-       nsmall = 0, big.mark = ",")
+nrow(data)
+```
+
+Proportions of observations choosing psychology (not) as a major:
+
+```{r}
+prop.table(table(data$major)) ## total dataset
+prop.table(table(data$major[train_ids])) ## train dataset
+prop.table(table(data$major[test_ids])) ## test dataset
 ``` 
 
 
-### Model fitting and evaluation
-
-```{r} 
-format(length(train_ids), nsmall = 0, big.mark = ",")
-format(unname(round(100*table(data$major[train_ids])[2] / length(train_ids), 
-                    digits = 2)), nsmall = 0, big.mark = ",")
-format(length(test_ids), nsmall = 0, big.mark = ",")
-format(unname(round(100*table(data$major[test_ids])[2] / length(test_ids), 
-                    digits = 2)), nsmall = 0, big.mark = ",")
-paste0(R.Version()$major, ".", R.Version()$minor)
-```
 
 
-
-## Results
+# Results {#results}
 
 ```{r}
 varnames_i <- paste0(rep(c("R", "I", "A", "S", "E", "C"), each = 8), 1:8)
 varnames_s <- c("R", "I", "A", "S", "E", "C")
 ```
 
-### (penalized) Logistic regression
+## (Penalized) Logistic Regression
 
 ```{r}
 glmod_s <- glm(major ~ Real + Inve + Arti + Soci + Ente + Conv, 
@@ -105,7 +108,7 @@ glm_preds_test_i <- predict(glmod_i, newx = as.matrix(data[test_ids, varnames_i]
 ```
 
 
-### Generalized additive model
+## Generalized Additive Model
 
 ```{r, eval=FALSE, fig.height=6, fig.width=11, warning=FALSE, message=FALSE}
 library("mgcv")
@@ -122,7 +125,9 @@ library("mgcv")
 load(file = "GAM_subscales.Rda")
 ```
 
-**Figure 1**
+
+### Figure 1
+
 ```{r fig.width=7, fig.height=4, warning=FALSE, message=FALSE}
 par(mfrow = c(2, 3))
 plot(gamod_s)
@@ -158,10 +163,10 @@ gam_preds_test_i <- predict(gamod_i, newdata = data[test_ids, ], type = "respons
 
 
 
+## Decision Tree
 
-### Decision tree
+### Figure 2
 
-**Figure 2**  
 ```{r, fig.height=3.5, fig.width=6.5, warning=FALSE, message=FALSE}
 library("partykit")
 ct_s <- ctree(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ], 
@@ -183,8 +188,7 @@ ct_preds_test_i <- predict(ct, newdata = data[test_ids , ], type = "prob")[ , "p
 
 
 
-
-### Gradient boosted tree ensemble
+## Gradient boosted tree ensemble
 
 ```{r, eval=FALSE, warning=FALSE, message = FALSE}
 library("gbm")
@@ -204,7 +208,7 @@ library("gbm")
 load("GBM_subscales.Rda")
 ```
 
-```{r}
+```{r, message=FALSE}
 gb_preds_train_s <- predict(gb_s, newdata = data[train_ids, ], type = "response")
 gb_preds_test_s <- predict(gb_s, newdata = data[test_ids, ], type = "response")
 ```
@@ -231,12 +235,15 @@ save(sum_i, file = "gb_i_summary.Rda")
 load("GBM_items.Rda")
 ```
 
-```{r}
+```{r, message=FALSE}
 gb_preds_train_i <- predict(gb_i, newdata = data[train_ids, ], type = "response")
 gb_preds_test_i <- predict(gb_i, newdata = data[test_ids, ], type = "response")
 ```
 
-### Random forest
+
+
+
+## Random Forest
 
 ```{r eval=FALSE, warning=FALSE, message=FALSE}
 library("ranger")
@@ -283,7 +290,7 @@ rf_preds_test_i <- predict(rf_i, data = data[test_ids, ])$predictions[ , "psycho
 
 
 
-### Prediction rule ensembling
+## Prediction Rule Ensembling
 
 ```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
 library("pre")
@@ -302,7 +309,9 @@ library("pre")
 load("PRE_subscales.Rda")
 ```
 
-**Table 1**  
+
+### Table 1 
+
 ```{r}
 pr_preds_train_s <- predict(pr_s, type = "response")
 pr_preds_test_s <- predict(pr_s, newdata = data[test_ids , ], type = "response")
@@ -339,7 +348,7 @@ pr_preds_test_i <- predict(pr_i, newdata = data[test_ids , ], type = "response")
  
 
 
-### *k* Nearest neighbours
+## *k* Nearest Neighbours
 
 ```{r, eval=FALSE}
 library("class")
@@ -420,12 +429,11 @@ load("knn_preds_test_item.Rda")
 
 ## Model comparisons
 
-### Variable contributions
 
-**Figure 3**  
+### Figure 3
 
-```{r, fig.width=7, fig.height=1.5, warning=FALSE, message=FALSE}
-par(mfrow = c(1, 3))
+```{r, fig.width=7, fig.height=3, warning=FALSE, message=FALSE}
+par(mfrow = c(2, 3))
 par(mar = c(1, 4, 2, 1), mgp = c(1.5, .5, 0), tck = -0.05)
 library("colorspace")
 
@@ -490,8 +498,135 @@ text(imps, labels = varnames_s, cex = 1,
      col = rep(qualitative_hcl(6)), font = 2)
 ```
   
+
+### Figure 5
+
+```{r message = FALSE, warning=FALSE, fig.width=8, fig.height=3.5}
+## Gather results for prediction with subscales
+preds_train <- data.frame(bm_preds_train = rep(mean(train_y), times = length(train_ids)), 
+                          glm_preds_train_s, gam_preds_train_s, 
+                          ct_preds_train_s, pr_preds_train_s, gb_preds_train_s,
+                          rf_preds_train_s, knn_preds_train_s)
+preds_test <- data.frame(bm_preds_test = rep(mean(train_y), times = length(test_ids)),
+                         glm_preds_test_s, gam_preds_test_s, 
+                         ct_preds_test_s, pr_preds_test_s, gb_preds_test_s,
+                         rf_preds_test_s, knn_preds_test_s)
+results <- data.frame(
+  Brier_train = sapply(preds_train, function(x) mean((train_y - x)^2)),
+  Brier_test = sapply(preds_test, function(x) mean((test_y - x)^2)))
+results$R2_train <- 1 - results$Brier_train / results$Brier_train[1]
+results$R2_test <- 1 - results$Brier_test / results$Brier_test[1]
+
+tmp <- data.frame(
+  R2 = c(results$R2_train[-1], results$R2_test[-1]),
+  SE = c(sapply((preds_train[,-1] - train_y)^2, 
+                function(x) sd(x)/(sqrt(nrow(preds_train))*results$Brier_train[1])),
+         sapply((preds_test[,-1] - test_y)^2, 
+                function(x) sd(x)/(sqrt(nrow(preds_test))*results$Brier_test[1]))),
+  data = rep(c("train", "test"), each = nrow(results)-1), 
+  method = rep(c("GLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"), times = 2))
+tmp$data <- factor(tmp$data, levels = c("train", "test"))
+tmp$method <- factor(tmp$method, levels = c("GLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"))
+
+## Plot results
+library("ggplot2")
+p_subscales <- ggplot(tmp, aes(x = method, y = R2)) +
+  geom_point(aes(color = data, fill = data), 
+             stat = "identity", position = position_dodge(0.4)) + 
+  ggtitle("subscales") + xlab("") + ylab(expression("Pseudo "~R^2)) + 
+  theme(legend.position = "none", plot.title = element_text(size = 11)) +
+  scale_color_manual(values = c("#0073C2FF", "#ff9933")) + ylim(0, 0.25) +
+  scale_fill_manual(values = c("#0073C2FF", "#ff9933")) + 
+  geom_errorbar(aes(color=data, ymin = R2-1.96*SE, ymax = R2+1.96*SE), 
+                width = .2, position = position_dodge(0.4))
+
+## Gather results for prediction with items
+preds_train <- data.frame(bm_preds_train = rep(mean(train_y), times = length(train_ids)), 
+                          glm_preds_train_i, gam_preds_train_i,
+                          ct_preds_train_i, pr_preds_train_i, gb_preds_train_i,
+                          rf_preds_train_i, knn_preds_train_i)
+preds_test <- data.frame(bm_preds_test = rep(mean(train_y), times = length(test_ids)),
+                          glm_preds_test_i, gam_preds_test_i,
+                          ct_preds_test_i, pr_preds_test_i, gb_preds_test_i, 
+                         rf_preds_test_i, knn_preds_test_i)
+results <- data.frame(
+  Brier_train = sapply(preds_train, function(x) mean((train_y - x)^2)),
+  Brier_test = sapply(preds_test, function(x) mean((test_y - x)^2)))
+results$R2_train <- 1 - results$Brier_train / results$Brier_train[1]
+results$R2_test <- 1 - results$Brier_test / results$Brier_test[1]
+
+tmp <- data.frame(
+  R2 = c(results$R2_train[-1], results$R2_test[-1]),
+  SE = c(sapply((preds_train[,-1] - train_y)^2, 
+                function(x) sd(x)/(sqrt(nrow(preds_train))*results$Brier_train[1])),
+          sapply((preds_test[,-1] - test_y)^2, 
+                function(x) sd(x)/(sqrt(nrow(preds_test))*results$Brier_test[1]))),
+  data = rep(c("train", "test"), each = nrow(results)-1), 
+  method = rep(c("pGLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"), times = 2))
+tmp$data <- factor(tmp$data, levels = c("train", "test"))
+tmp$method <- factor(tmp$method, levels = c("pGLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"))
+
+## Plot results
+p_items <- ggplot(tmp, aes(x = method, y = R2)) +
+  geom_point(aes(color = data, fill = data), 
+    stat = "identity", position = position_dodge(0.4)) + xlab("") + ylab(" ") + 
+  theme(axis.text.y=element_blank(), axis.ticks.y = element_blank(),
+        plot.title = element_text(size = 11), legend.title = element_blank()) +
+  ggtitle("items") + scale_color_manual(values = c("#0073C2FF", "#ff9933")) +
+  scale_fill_manual(values = c("#0073C2FF", "#ff9933")) + ylim(0, .25) +
+  geom_errorbar(aes(color=data, ymin = R2-1.96*SE, ymax = R2+1.96*SE), 
+                width = .2, position = position_dodge(0.4))
+
+library("gridExtra")
+grid.arrange(p_subscales, p_items, ncol = 2, widths = c(6.75, 8))
+```
+
+
+
+
+
+
+# Appendix B {#appB}
+
+```{r}
+data$age[data$age > 103] <- NA ## remove impossible ages
+prop.table(table(data$gender)) ## 0=missing, 1=Male, 2=Female, 3=Other
+prop.table(table(data$married)) ## 0=missing, 1,2,3=Never, currently, previously married
+prop.table(table(data$urban)) ## 0=missing, 1=Rural, 2=Suburban, 3=Urban
+prop.table(table(data$race)) ## 0=missing, 1=Asian, 2=Arab, 3=Black, 
+## 4=Indigenous Australian/Native American/White, 5=Other 
+## (A coding mistake resulted in aggregating options in category 4)
+prop.table(table(data$engnat)) ## 0=missing, 1=Yes, 2=No
+```
+
+### Figure B1
+
+```{r warning=FALSE, message=FALSE, fig.width=8, fig.height=4.8}
+par(mfrow = c(2, 3))
+for (i in c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")) {
+  dens <- density(data[ , i])
+  plot(dens, main = "", xlab = i)
+  polygon(dens, col="lightblue", border="black")  
+}
+```
   
-**Figure 4**  
+
+### Table B1
+
+```{r}
+tab <- round(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]), 
+             digits = 3L)
+kable(tab)
+```
+
+
+
+
+
+# Appendix C {#appC}
+
+### Figure C1
+
 ```{r, fig.width=6, fig.height=8, warning=FALSE, message=FALSE}
 par(mar = c(1.5, 4, 0.2, 2), mgp = c(1.5, .5, 0), tck = -0.05)
 par(mfrow = c(6, 1))
@@ -584,157 +719,7 @@ axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
      cex.axis = .7)
 ```
   
-  
-**Figure 5**  
-```{r echo=FALSE, message = FALSE, warning=FALSE, fig.width=8, fig.height=3.5}
-## Gather results for prediction with subscales
-preds_train <- data.frame(bm_preds_train = rep(mean(train_y), times = length(train_ids)), 
-                          glm_preds_train_s, gam_preds_train_s, 
-                          ct_preds_train_s, pr_preds_train_s, gb_preds_train_s,
-                          rf_preds_train_s, knn_preds_train_s)
-preds_test <- data.frame(bm_preds_test = rep(mean(train_y), times = length(test_ids)),
-                         glm_preds_test_s, gam_preds_test_s, 
-                         ct_preds_test_s, pr_preds_test_s, gb_preds_test_s,
-                         rf_preds_test_s, knn_preds_test_s)
-results <- data.frame(
-  Brier_train = sapply(preds_train, function(x) mean((train_y - x)^2)),
-  Brier_test = sapply(preds_test, function(x) mean((test_y - x)^2)))
-results$R2_train <- 1 - results$Brier_train / results$Brier_train[1]
-results$R2_test <- 1 - results$Brier_test / results$Brier_test[1]
-rownames(results) <- c("chance", "(penalized)\nGLM", "Smoothing\nsplines", 
-                       "tree", "PRE", "Boosted\nensemble", "Random\nforest", "kNN")
-
-tmp <- data.frame(
-  R2 = c(results$R2_train[-1], results$R2_test[-1]),
-  SE = c(sapply((preds_train[,-1] - train_y)^2, 
-                function(x) sd(x)/(sqrt(nrow(preds_train))*results$Brier_train[1])),
-         sapply((preds_test[,-1] - test_y)^2, 
-                function(x) sd(x)/(sqrt(nrow(preds_test))*results$Brier_test[1]))),
-  data = rep(c("train", "test"), each = nrow(results)-1), 
-  method = rep(c("GLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"), times = 2))
-tmp$data <- factor(tmp$data, levels = c("train", "test"))
-tmp$method <- factor(tmp$method, levels = c("GLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"))
-
-## Plot results
-library("ggplot2")
-p_subscales <- ggplot(tmp, aes(x = method, y = R2)) +
-  geom_point(aes(color = data, fill = data), 
-             stat = "identity", position = position_dodge(0.4)) + 
-  ggtitle("subscales") + xlab("") + ylab("Pseudo R squared") + 
-  theme(legend.position = "none", plot.title = element_text(size = 11)) +
-  scale_color_manual(values = c("#0073C2FF", "#ff9933")) + ylim(0, 0.25) +
-  scale_fill_manual(values = c("#0073C2FF", "#ff9933")) + 
-  geom_errorbar(aes(color=data, ymin = R2-1.96*SE, ymax = R2+1.96*SE), 
-                width = .2, position = position_dodge(0.4))
-
-## Gather results for prediction with items
-preds_train <- data.frame(bm_preds_train = rep(mean(train_y), times = length(train_ids)), 
-                          glm_preds_train_i, gam_preds_train_i,
-                          ct_preds_train_i, pr_preds_train_i, gb_preds_train_i,
-                          rf_preds_train_i, knn_preds_train_i)
-preds_test <- data.frame(bm_preds_test = rep(mean(train_y), times = length(test_ids)),
-                          glm_preds_test_i, gam_preds_test_i,
-                          ct_preds_test_i, pr_preds_test_i, gb_preds_test_i, 
-                         rf_preds_test_i, knn_preds_test_i)
-results <- data.frame(
-  Brier_train = sapply(preds_train, function(x) mean((train_y - x)^2)),
-  Brier_test = sapply(preds_test, function(x) mean((test_y - x)^2)))
-results$R2_train <- 1 - results$Brier_train / results$Brier_train[1]
-results$R2_test <- 1 - results$Brier_test / results$Brier_test[1]
-rownames(results) <- c("chance", "(penalized)\nGLM", "Smoothing\nsplines (GAM)", 
-                       "tree", "PRE", "Boosted\nensemble", "Random\nforest", "kNN")
-
-tmp <- data.frame(
-  R2 = c(results$R2_train[-1], results$R2_test[-1]),
-  SE = c(sapply((preds_train[,-1] - train_y)^2, 
-                function(x) sd(x)/(sqrt(nrow(preds_train))*results$Brier_train[1])),
-          sapply((preds_test[,-1] - test_y)^2, 
-                function(x) sd(x)/(sqrt(nrow(preds_test))*results$Brier_test[1]))),
-  data = rep(c("train", "test"), each = nrow(results)-1), 
-  method = rep(c("pGLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"), times = 2))
-tmp$data <- factor(tmp$data, levels = c("train", "test"))
-tmp$method <- factor(tmp$method, levels = c("pGLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"))
-
-## Plot results
-p_items <- ggplot(tmp, aes(x = method, y = R2)) +
-  geom_point(aes(color = data, fill = data), 
-    stat = "identity", position = position_dodge(0.4)) + xlab("") + ylab(" ") + 
-  theme(axis.text.y=element_blank(), axis.ticks.y = element_blank(),
-        plot.title = element_text(size = 11), legend.title = element_blank()) +
-  ggtitle("items") + scale_color_manual(values = c("#0073C2FF", "#ff9933")) +
-  scale_fill_manual(values = c("#0073C2FF", "#ff9933")) + ylim(0, .25) +
-  geom_errorbar(aes(color=data, ymin = R2-1.96*SE, ymax = R2+1.96*SE), 
-                width = .2, position = position_dodge(0.4))
-
-library("gridExtra")
-grid.arrange(p_subscales, p_items, ncol = 2, widths = c(6.75,8))
-```
 
 
-
-\newpage
-# Appendix B: Uni- and bivariate sample descriptives
-
-```{r}
-data$age[data$age > 103] <- NA 
-## some crazy ages were supplied
-gender_tab <- prop.table(table(data$gender)) 
-## 0=missing, 1=Male, 2=Female, 3=Other
-marital_tab <- prop.table(table(data$married)) 
-## 0=missing, 1=Never married, 2=Currently married, 3=Previously married
-urban_tab <- prop.table(table(data$urban)) 
-## 0=missing, 1=Rural (country side), 2=Suburban, 3=Urban (town, city)
-race_tab <- prop.table(table(data$race)) 
-## 0=missing, 1=Asian, 2=Arab, 3=Black, 
-## 4=Indigenous Australian / Native American / White, 5=Other 
-## (There was a coding mistake resulting in cat 4)
-language_tab <- prop.table(table(data$engnat)) 
-## 0=missing, 1=Yes, 2=No
-```
-
-```{r}
-format(nrow(data), nsmall = 0, big.mark = ",") 
-format(mean(data$age, na.rm = TRUE), digits = 2, nsmall = 2, big.mark = ",")
-format(sd(data$age, na.rm = TRUE), nsmall = 2, digits = 2, big.mark = ",")
-format(100*gender_tab[3], nsmall = 0, digits = 0, big.mark = ",")
-format(100*gender_tab[2], nsmall = 0, digits = 0, big.mark = ",")
-format(100*gender_tab[4], nsmall = 0, digits = 0, big.mark = ",")
-format(100*marital_tab[2], nsmall = 0, digits = 0, big.mark = ",")
-format(100*marital_tab[3], nsmall = 0, digits = 0, big.mark = ",")
-format(100*marital_tab[4], nsmall = 0, digits = 0, big.mark = ",")
-format(100*urban_tab[2], nsmall = 0, digits = 0, big.mark = ",")
-format(100*urban_tab[3], nsmall = 0, digits = 0, big.mark = ",")
-format(100*urban_tab[4], nsmall = 0, digits = 0, big.mark = ",")
-format(100*language_tab[2], nsmall = 0, digits = 0, big.mark = ",")
-format(100*language_tab[3], nsmall = 0, digits = 0, big.mark = ",")
-format(100*race_tab[2], nsmall = 0, digits = 0, big.mark = ",")
-format(100*race_tab[3], nsmall = 0, digits = 0, big.mark = ",")
-format(100*race_tab[4], nsmall = 0, digits = 0, big.mark = ",")
-format(100*race_tab[5], nsmall = 0, digits = 0, big.mark = ",")
-format(100*race_tab[1], nsmall = 0, digits = 0, big.mark = ",")   
-```
-
-  
-**Figure 6**  
-```{r, warning=FALSE, message=FALSE, fig.width=8, fig.height=4.8}
-par(mfrow = c(2, 3))
-for (i in c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")) {
-  dens <- density(data[ , i])
-  plot(dens, main = "", xlab = i)
-  polygon(dens, col="lightblue", border="black")  
-}
-```
-  
-  
-  
-  
-**Table 2**  
-```{r}
-tab <- round(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]), 
-             digits = 3L)
-kable(tab)
-```
-
-
-# References
+# References {#references}
 
