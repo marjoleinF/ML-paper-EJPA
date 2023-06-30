@@ -27,7 +27,7 @@ In this Appendix, we present scripts for replicating the results from the main p
 
 All analyses were performed in **`R`** [version `r paste0(R.Version()$major, ".", R.Version()$minor)`, @R21]. We fitted (penalized) logistic regression models using **`R`** package **``glmnet``** [version `r packageVersion("glmnet")`, @FrieyHast10]; generalized additive models (GAMs) with smoothing splines using package **``mgcv``** [version `r packageVersion("mgcv")`, @Wood17]; conditional inference trees using package **``partykit``** [version `r packageVersion("partykit")`, @HothyHorn06]; gradient boosted tree ensembles using package **``gbm``** [version `r packageVersion("gbm")`, @GreeyBoeh20]; random forests using package **``ranger``** [version `r packageVersion("ranger")`, @WrigyZieg17]; prediction rule ensembles using package **``pre``** [version `r packageVersion("pre")`, @Fokk20]; $k$ nearest neighbours using package **``class``** [version `r packageVersion("class")`, @VeneyRipl02].
 
-Appendix E shows our code and results for tuning the parameter settings using cross validation. All parameter settings employed here are based on those results, for most methods. We did not tune the parameters of the GAMs with smoothing splines, because we expected the defaults to work well out of the box. We simply employed the defaults of thin-plate regression splines and generalized cross validation method to fit the smoothing splines. This provides built-in regularization of the wigglyness, without the need for choosing an optimal value for penalty or tuning parameters. For smaller samples, restricted maximum likelihood (REML) would be preferred. For the analyses using the items as predictors, we set the number of basis functions of the thin-plate regression splines to four, instead of the default of eight, because the item responses have only five possible values; increasing the number of basis functions would yield an unidentified model. Furthermore, because of the larger number of predictors, and the benefit of penalization observed in the logistic regression, we also applied a penalty to the linear part of each smoothing spline function, so that some items can be completely eliminated from the model.
+Appendix E shows our code and results for tuning the parameter settings using cross validation. All parameter settings employed here are based on those results, except for GAMs. We did not tune the parameters of the GAMs with smoothing splines, because we expected the defaults to work well out of the box. We simply employed the defaults of thin-plate regression splines and generalized cross validation method to fit the smoothing splines. This provides built-in regularization of the wigglyness, without the need for choosing an optimal value for penalty or tuning parameters. For smaller samples, restricted maximum likelihood (REML) would be preferred. For the analyses using the items as predictors, we set the number of basis functions of the thin-plate regression splines to four, instead of the default of eight, because the item responses have only five possible values; increasing the number of basis functions would yield an unidentified model. Furthermore, because of the larger number of predictors, and the benefit of penalization observed in the logistic regression, we also applied a penalty to the linear part of each smoothing spline function, so that some items can be completely eliminated from the model.
 
 
 ## Data preparation
@@ -75,6 +75,13 @@ Proportions of observations choosing psychology (not) as a major:
 prop.table(table(data$major)) ## total dataset
 prop.table(table(data$major[train_ids])) ## train dataset
 prop.table(table(data$major[test_ids])) ## test dataset
+```
+
+Which yields the following variances:
+
+```{r}
+var(as.numeric(data$major[train_ids]))
+var(as.numeric(data$major[test_ids]))
 ``` 
 
 
@@ -126,7 +133,7 @@ load(file = "GAM_subscales.Rda")
 ```
 
 
-### Figure 1
+### Figure 2
 
 ```{r fig.width=7, fig.height=4, warning=FALSE, message=FALSE}
 par(mfrow = c(2, 3))
@@ -138,12 +145,14 @@ gam_preds_test_s <- predict(gamod_s, newdata = data[test_ids, ], type = "respons
 
 ```{r, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
 library("mgcv")
-#apply(data[train_ids, varnames], 2, table) ## all items have 5 options
-gam_form <- formula(paste0("major ~", paste0("s(", varnames, ", k=4)", collapse = " + ")))
+#apply(data[train_ids, varnames_i], 2, table) ## all items have 5 options
 memory.limit(size = 32000)
 ```
 
 ```{r eval=FALSE}
+## Construct item-level formula and fit GAM
+gam_form <- formula(paste0("major ~", paste0("s(", varnames_i, ", k=4)", 
+                                             collapse = " + ")))
 gamod_i <- gam(gam_form, data = data[train_ids , ], family = "binomial", 
                select = TRUE)
 ```
@@ -165,7 +174,7 @@ gam_preds_test_i <- predict(gamod_i, newdata = data[test_ids, ], type = "respons
 
 ## Decision Tree
 
-### Figure 2
+### Figure 3
 
 ```{r, fig.height=3.5, fig.width=6.5, warning=FALSE, message=FALSE}
 library("partykit")
@@ -188,7 +197,7 @@ ct_preds_test_i <- predict(ct, newdata = data[test_ids , ], type = "prob")[ , "p
 
 
 
-## Gradient boosted tree ensemble
+## Gradient Boosted Tree Ensemble
 
 ```{r, eval=FALSE, warning=FALSE, message = FALSE}
 library("gbm")
@@ -290,7 +299,7 @@ rf_preds_test_i <- predict(rf_i, data = data[test_ids, ])$predictions[ , "psycho
 
 
 
-## Prediction Rule Ensembling
+## Prediction Rule Ensemble
 
 ```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
 library("pre")
@@ -320,7 +329,7 @@ varimps_pre <- imps$varimps
 imps <- imps$baseimps[1:6, c("description", "coefficient")]
 colnames(imps) <- c("Description", "Coefficient")
 imps$Coefficient <- round(imps$Coefficient, digits = 3)
-kable(imps, row.names = FALSE, align = c("l", "c"))
+knitr::kable(imps, row.names = FALSE, align = c("l", "c"))
 ``` 
 
 
@@ -352,10 +361,10 @@ pr_preds_test_i <- predict(pr_i, newdata = data[test_ids , ], type = "response")
 
 ```{r, eval=FALSE}
 library("class")
-
+ss_names <- c("Real", "Inve", "Arti", "Soci", "Ente", "Conv")
 ## Model for training predictions
-knn_mod <- knn(train = data[train_ids , varnames_s], 
-               test = data[train_ids , varnames_s], 
+knn_mod <- knn(train = data[train_ids , ss_names], 
+               test = data[train_ids , ss_names], 
                cl = as.factor(data[train_ids, "major"]), 
                k = 300, use.all = TRUE, prob = TRUE)
 ## Need to obtain predicted probability for second class
@@ -369,13 +378,14 @@ save(knn_preds_train_s, file = "knn_preds_train_scales.Rda")
 
 ```{r, eval=FALSE}
 ## Model for testing predictions
-knn_mod <- knn(train = data[train_ids , varnames_s], 
-               test = data[test_ids , varnames_s], 
+knn_mod <- knn(train = data[train_ids , ss_names], 
+               test = data[test_ids , ss_names], 
                cl = as.factor(data[train_ids, "major"]), 
                k = 300, use.all = TRUE, prob = TRUE)
 knn_preds_test_s <- ifelse(
   knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
 ```
+
 
 ```{r, eval=FALSE, echo=FALSE}
 save(knn_preds_test_s, file = "knn_preds_test_scales.Rda")
@@ -411,7 +421,7 @@ knn_mod <- knn(train = data[train_ids , varnames_i],
                test = data[test_ids , varnames_i], 
                cl = as.factor(data[train_ids, "major"]), 
                k = 100, use.all = TRUE, prob = TRUE)
-knn_preds_test <- ifelse(
+knn_preds_test_i <- ifelse(
   knn_mod == "psychology", attr(knn_mod, "prob"), 1 - attr(knn_mod, "prob"))
 ```
 
@@ -430,7 +440,7 @@ load("knn_preds_test_item.Rda")
 ## Model comparisons
 
 
-### Figure 3
+### Figure 1
 
 ```{r, fig.width=7, fig.height=3, warning=FALSE, message=FALSE}
 par(mfrow = c(2, 3))
@@ -527,6 +537,7 @@ tmp <- data.frame(
   method = rep(c("GLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"), times = 2))
 tmp$data <- factor(tmp$data, levels = c("train", "test"))
 tmp$method <- factor(tmp$method, levels = c("GLM", "GAM", "tree", "PRE", "GBE", "RF", "kNN"))
+tmp_s <- tmp
 
 ## Plot results
 library("ggplot2")
@@ -576,20 +587,32 @@ p_items <- ggplot(tmp, aes(x = method, y = R2)) +
   scale_fill_manual(values = c("#0073C2FF", "#ff9933")) + ylim(0, .25) +
   geom_errorbar(aes(color=data, ymin = R2-1.96*SE, ymax = R2+1.96*SE), 
                 width = .2, position = position_dodge(0.4))
+tmp_i <- tmp
 
 library("gridExtra")
 grid.arrange(p_subscales, p_items, ncol = 2, widths = c(6.75, 8))
 ```
 
 
+```{r}
+tmp_s <- cbind(tmp_s[tmp_s$data == "test", ], tmp_s[tmp_s$data == "train", ])
+tmp_i <- cbind(tmp_i[tmp_i$data == "test", ], tmp_i[tmp_i$data == "train", ])
+colnames(tmp_s) <- colnames(tmp_i) <- c("R2 (test)", "SE (test)", "data", "method", 
+                                        "R2 (train)", "SE (train)", "data", "method")
+tmp_s$rank <- rank(1 - tmp_s[ , "R2 (test)"])
+tmp_i$rank <- rank(1 - tmp_i[ , "R2 (test)"])
+knitr::kable(tmp_s[ , c(4, 1, 2, 5, 6, 9)], row.names = FALSE, digits = 4L) ## scale scores
+knitr::kable(tmp_i[ , c(4, 1, 2, 5, 6, 9)], row.names = FALSE, digits = 4L) ## item scores
+```
 
 
-
-
-# Appendix B {#appB}
+\newpage
+# Appendix B (ESM 2) {#appB}
 
 ```{r}
 data$age[data$age > 103] <- NA ## remove impossible ages
+mean(data$age, na.rm = TRUE)
+sd(data$age, na.rm = TRUE)
 prop.table(table(data$gender)) ## 0=missing, 1=Male, 2=Female, 3=Other
 prop.table(table(data$married)) ## 0=missing, 1,2,3=Never, currently, previously married
 prop.table(table(data$urban)) ## 0=missing, 1=Rural, 2=Suburban, 3=Urban
@@ -616,14 +639,14 @@ for (i in c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")) {
 ```{r}
 tab <- round(cor(data[ , c("Real", "Inve", "Arti", "Soci" , "Ente", "Conv")]), 
              digits = 3L)
-kable(tab)
+knitr::kable(tab)
 ```
 
 
 
 
-
-# Appendix C {#appC}
+\newpage
+# Appendix C (ESM 3) {#appC}
 
 ### Figure C1
 
@@ -641,8 +664,7 @@ abline(0, 0, col = "grey")
 legend("topleft", legend = "Penalized logistic regression", cex = .7, bty = "n")
 axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
      labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
+                             "Enterprising", "Conventional"), cex.axis = .7)
 
 library("mgcv")
 load(file = "GAM_items.Rda")
@@ -655,8 +677,7 @@ text(sqrt(sum$chi.sq), labels = varnames_i, cex = .5,
 legend("topleft", legend = "Generalized Additive Model", cex = .7, bty = "n")
 axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
      labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
+                             "Enterprising", "Conventional"), cex.axis = .7)
 
 ct6 <- cforest(ct_form, 
                data = data[train_ids , ], ntree = 1L, mtry = 6,
@@ -674,8 +695,7 @@ text(sqrt(imps[varnames_i]), labels = varnames_i, cex = .5,
 legend("topleft", legend = "Tree", cex = .7, bty = "n")
 axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
      labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
+                             "Enterprising", "Conventional"), cex.axis = .7)
 
 load(file = "gb_i_summary.Rda")
 imps <- sum_i[match(varnames_i, sum_i$var), ]
@@ -687,8 +707,7 @@ text(sqrt(imps$rel.inf), labels = imps$var, cex = .5,
 legend("topleft", legend = "Boosted ensemble", cex = .7, bty = "n")
 axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
      labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
+                             "Enterprising", "Conventional"), cex.axis = .7)
 
 imps <- ranger::importance(rf_i)
 plot(sqrt(imps), xaxt = "n", main = " ",
@@ -699,8 +718,7 @@ text(sqrt(imps), labels = names(imps), cex = .5,
 legend("topleft", legend = "Random forest", cex = .7, bty = "n")
 axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
      labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
+                             "Enterprising", "Conventional"), cex.axis = .7)
 
 imps <- pre::importance(pr_i, cex.axis = .7, plot = FALSE)$varimps
 zero_vars <- varnames_i[!varnames_i %in% imps[ , 1]]
@@ -715,11 +733,10 @@ text(imps$imp, labels = imps$varname, cex = .5,
 legend("topleft", legend = "Prediction rule ensemble", cex = .7, bty = "n")
 axis(1, 4.5 + c(0:5)*8, tick = FALSE, padj = -1.5,
      labels = c("Realistic", "Investigative", "Artistic", "Social" , 
-                             "Enterprising", "Conventional"), 
-     cex.axis = .7)
+                             "Enterprising", "Conventional"), cex.axis = .7)
 ```
   
 
-
+\newpage
 # References {#references}
 

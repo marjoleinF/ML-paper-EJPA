@@ -5,7 +5,6 @@ csl: apa.csl
 output:
   word_document:
     reference_docx: reference.docx
-    keep_md: TRUE
 ---
 
 ```{r setup, include=FALSE}
@@ -120,9 +119,9 @@ data$Conv <- rowSums(data[ , paste0("C", 1:8)])
 
 We use a dataset from the Open Psychometrics Project (https://openpsychometrics.org/_rawdata/). Data were collected through their website from 2015 to 2018. Respondents answered items on vocational preferences, personality and sociodemographic characteristics. The sample likely does not represent a random sample from a well-defined population, which would normally be required for evaluating a test's validity.  
 
-We investigate predictive validity of the RIASEC vocational preferences scales [@LiaoyArms08]. The RIASEC uses six occupational categories from Holland's Occupational Themes [@Holl59] theory: Realistic (R), Investigative (I), Artistic (A), Social (S), Enterprising (E), and Conventional (C). There are 8 items for each category, each describing a task (e.g., R6: "Fix a broken faucet" or I2: "Study animal behavior"), to which respondents answer on a 1-5 scale, with 1=Dislike, 3=Neutral, 5=Enjoy. The items are presented in Appendix A. The research question from an assessment perspective is whether the RIASEC scores can be used to predict the university major completed. Such evidence could support the use of the scale in applied settings; moreover, the results could inform decision rules.
+We investigate predictive validity of the RIASEC vocational preferences scales [@LiaoyArms08]. The RIASEC uses six occupational categories from Holland's Occupational Themes [@Holl59] theory: Realistic (R), Investigative (I), Artistic (A), Social (S), Enterprising (E), and Conventional (C). There are 8 items for each category, each describing a task (e.g., R6: "Fix a broken faucet" or I2: "Study animal behavior"), to which respondents answer on a 1-5 scale, with 1=Dislike, 3=Neutral, 5=Enjoy. The items are presented in ESM 1. The research question from an assessment perspective is whether the RIASEC scores can be used to predict the university major completed. Such evidence could support the use of the scale in applied settings; moreover, the results could inform decision rules.
 
-From the full dataset, we selected participants who completed at least a university degree, yielding a sample of *N =* `r format(nrow(data), nsmall = 0, big.mark = ",")` observations. As the criterion we take a binary variable, indicating whether respondents majored in Psychology (`r format(unname(round(100*table(data$major)[2] / nrow(data), digits = 2)), nsmall = 0, big.mark = ",")`\%), or in a different topic (`r format(unname(round(100*table(data$major)[1] / nrow(data), digits = 2)), nsmall = 0, big.mark = ",")`\%). Further descriptive statistics of the sample are presented in Appendix B. 
+From the full dataset, we selected participants who completed at least a university degree, yielding a sample of *N =* `r format(nrow(data), nsmall = 0, big.mark = ",")` observations. As the criterion we take a binary variable, indicating whether respondents majored in Psychology (`r format(unname(round(100*table(data$major)[2] / nrow(data), digits = 2)), nsmall = 0, big.mark = ",")`\%), or in a different topic (`r format(unname(round(100*table(data$major)[1] / nrow(data), digits = 2)), nsmall = 0, big.mark = ",")`\%). Further descriptive statistics of the sample are presented in ESM 2. 
 
 
 ```{r eval = FALSE, echo=FALSE}
@@ -169,7 +168,7 @@ The Brier score is the mean squared error of the predicted probabilities:
 
 $$\frac{1}{N} \sum_{i=1}^{N} (y_i - \hat{p}_i)^2$$
 
-Where $y_i$ is the observed outcome for observation $i$, taking a value of 0 or 1; $\hat{p}_i$ is the model's predicted probability. We computed Brier scores on training as well as on test observations; thus $N$ can be taken to be the training or the test sample size. A Brier score equal to the variance of $y$ indicates performance no better than chance (in the current dataset, the variance was `r round(prop.table(table(train_y))[2], digits = 4)` for training and `r round(prop.table(table(test_y))[2], digits = 4)` for test data). To obtain a pseudo-$R^2$ measure, we take 1 minus the Brier score divided by the variance of $y$, which takes values between 0 (indicating performance no better than chance) and 1 (indicating perfect accuracy). 
+Where $y_i$ is the observed outcome for observation $i$, taking a value of 0 or 1; $\hat{p}_i$ is the model's predicted probability. We computed Brier scores on training as well as on test observations; thus $N$ can be taken to be the training or the test sample size. A Brier score equal to the variance of $y$ indicates performance no better than chance (in the current dataset, the variance was `r round(prop.table(table(train_y))[2]*(1-prop.table(table(train_y))[2]), digits = 4)` for training and `r round(prop.table(table(train_y))[2]*(1-prop.table(table(test_y))[2]), digits = 4)` for test data). To obtain a pseudo-$R^2$ measure, we take 1 minus the Brier score divided by the variance of $y$, which takes values between 0 (indicating performance no better than chance) and 1 (indicating perfect accuracy). 
 
 
 
@@ -188,7 +187,7 @@ Considering the two shifts in predictive modeling discussed in the Introduction,
 
 Our benchmark traditional method is an additive generalized linear model (GLM): Logistic regression. If CV results indicated predictive accuracy could be improved by application of a lasso or ridge penalty, we applied it. For prediction with subscale scores, no penalization was found to be optimal. The estimated coefficients for the subscale scores are presented in Figure 3; as expected with the currently large sample size, all subscale scores obtained $p$-values $< .001$. The strongest effect was a positive effect from the Social preferences scale, and the weakest effect was a negative effect from the Conventional preferences scale.
 
-For prediction with item scores, CV indicated optimal performance for a small but non-zero value of the lasso penalty. With an increasing number of predictor variables, this beneficial effect of penalization (or regularization) is generally expected. The resulting item-level coefficients are depicted in Figure C1 (ESM). The item coefficients indicate similar relevance of the subscales as the previous analysis, but provide a more finegrained view of individual item's contributions.
+For prediction with item scores, CV indicated optimal performance for a small but non-zero value of the lasso penalty. With an increasing number of predictor variables, this beneficial effect of penalization (or regularization) is generally expected. The resulting item-level coefficients are depicted in Figure C1 (ESM 3). The item coefficients indicate similar relevance of the subscales as the previous analysis, but provide a more finegrained view of individual item's contributions.
 
 
 
@@ -235,12 +234,12 @@ plot(gamod_s)
 gam_preds_train_s <- predict(gamod_s, newdata = data[train_ids, ], type = "response")
 gam_preds_test_s <- predict(gamod_s, newdata = data[test_ids, ], type = "response")
 ```
-*Note. * Values on the $y$-axis reflect the effect on the log-odds of having completed a university major in psychology.  
+*Note. * Values on the $y$-axis reflect the effect on the log-odds of having completed a university major in psychology. Real = Realistic; Inve = Investigative; Arti = Artistic; Soci = Social; Ente = Enterprising; Conv = Conventional.  
   
   
 The splines fitted to the subscale scores are presented in Figure 1. Similar to the GLM, we see positive effects of the Social and Investigative subscales, and negative effects of the Realistic, Artistic, Enterprising and Conventional subscales. The Social preferences subscale shows a near-linear effect, while the other subscales' effects clearly exhibit some stronger non-linearity. An advantage of GAMs is that they allow for inference: they provide $\chi^2$ tests to evaluate the significance of the effect of each predictor variable. As expected with the current large sample size, all subscale scores obtained $p$-values $< .001$.
 
-For the GAM fitted using item scores, we also applied penalization, as this was expected to be beneficial for prediction, as similarly observed in the GLM. We do not depict the fitted curves for space considerations here, but Figures 3 and C1 (ESM) show the $\chi^2$ values per subscale and per item, respectively. The figures indicate very similar effects of the predictors, between the (penalized) GLMs and GAMs.
+For the GAM fitted using item scores, we also applied penalization, as this was expected to be beneficial for prediction, as similarly observed in the GLM. We do not depict the fitted curves for space considerations here, but Figures 3 and C1 (ESM 3) show the $\chi^2$ values per subscale and per item, respectively. The figures indicate very similar effects of the predictors, between the (penalized) GLMs and GAMs.
 
 ```{r, echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
 library("mgcv")
@@ -264,7 +263,7 @@ We now leave the realm of additive models, and set about fitting models that all
 
 ### Decision tree
 
-We fit a single decision tree using the conditional inference tree algorithm [@HothyHorn06]. This algorithm eliminates the variable selection bias present in many other decision-tree algorithms. Decision-tree methods and variable selection bias are discussed in more detail by @StroyMall09, who provide a comprehensive introduction aimed at psychologists. According to our CV results with the subscales as predictors, a tree depth of seven was optimal, yielding a tree with $2^6 = 128$ terminal nodes. Thus, for this data problem, the most accurate tree is surely not the most interpretable. The predictor variables selected by the trees are depicted in Figures 3 and C1 (ESM).
+We fit a single decision tree using the conditional inference tree algorithm [@HothyHorn06]. This algorithm eliminates the variable selection bias present in many other decision-tree algorithms. Decision-tree methods and variable selection bias are discussed in more detail by @StroyMall09, who provide a comprehensive introduction aimed at psychologists. According to our CV results with the subscales as predictors, a tree depth of seven was optimal, yielding a tree with $2^6 = 128$ terminal nodes. Thus, for this data problem, the most accurate tree is surely not the most interpretable. The predictor variables selected by the trees are depicted in Figures 3 and C1 (ESM 3).
 
 For illustration, Figure 2 shows the decision tree fitted to the subscale scores, pruned to a depth of three. The Social, Realistic and Enterprising preferences subscales were used in the first splits of the tree. The bars in the terminal nodes depict the proportion of participants within each node that majored in psychology. Thus, the Social subscale shows a positive effect, and the Realistic and Enterprising subscales show a negative effect. With regards to possible interactions, note that split number 10 suggests that the Enterprising subscale appears relevant only for higher values of the Social, and lower values of the Realistic subscales. However, such a split may also reflect additive effects combined with multicollinearity. Although decision trees can *capture* interaction effects, they cannot be straightforwardly used to statistically test their significance; a disadvantage shared by virtually all flexible ML and AI techniques.  
   
@@ -287,7 +286,7 @@ plot(ct3, gp = gpar(cex = .5), ip_args = list(pval = FALSE))
 ct_preds_train_s <- predict(ct_s, type = "prob")[ , "psychology"]
 ct_preds_test_s <- predict(ct_s, newdata = data[test_ids , ], type = "prob")[ , "psychology"]
 ```
-
+*Note. * Soci = Social; Real = Realistic; Ente = Enterprising.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 ct_form <- formula(paste("major ~", paste(varnames_i, collapse = "+")))
@@ -348,7 +347,7 @@ gb_preds_train_i <- predict(gb_i, newdata = data[train_ids, ], type = "response"
 gb_preds_test_i <- predict(gb_i, newdata = data[test_ids, ], type = "response")
 ```
 
-A disadvantage of decision tree ensembles is their black box nature: While individual trees are generally easy to interpret, an ensemble of trees is impossible for humans to grasp. Therefore, so-called variable importance measures have been developed for interpretation of tree ensembles, which aim to quantify the effect of predictor variable on the predictions of the ensemble. In this paper, we use the permutation importances proposed by Breiman [-@Brei01]. These quantify how much an ensemble's predictive accuracy would be reduced, if the values of each of the predictor variables are randomly shuffled. The variable importances of the fitted gradient boosting ensembles are depicted in Figures 3 and C1 (ESM).
+A disadvantage of decision tree ensembles is their black box nature: While individual trees are generally easy to interpret, an ensemble of trees is impossible for humans to grasp. Therefore, so-called variable importance measures have been developed for interpretation of tree ensembles, which aim to quantify the effect of predictor variable on the predictions of the ensemble. In this paper, we use the permutation importances proposed by Breiman [-@Brei01]. These quantify how much an ensemble's predictive accuracy would be reduced, if the values of each of the predictor variables are randomly shuffled. The variable importances of the fitted gradient boosting ensembles are depicted in Figures 3 and C1 (ESM 3).
 
 Importance measures provide a useful ranking of the contributions of each predictor to the ensemble's predictions, but should be interpreted with care. They should not be used to judge the significance of the effect of predictors; tree ensembles can easily include predictors in the model which in fact have no effect on the outcome. Furthermore, there are many ways to compute variable importance measures, which each may yield different conclusions, especially when predictors are correlated [@StroyBoul07; @StroyBoul08; @Nico11; @NicoyMall10]. Especially with correlated predictors, permuting the values of predictor variables may lead to unrealistic data patterns. These issues illustrate the interpretability problems which come along with complex prediction methods such as tree ensembles, support vector machines and (deep) neural networks.  
 
@@ -360,7 +359,7 @@ Another popular decision-tree ensembling method are random forests [@Brei01]. Li
 
 The most characteristic feature of random forests is how it selects variables for splitting: A random sample of *mtry* candidate predictor variables is considered for every split in every tree. From this set of predictor variables, the best splitting variable and value is selected. Without random selection of variables, each tree of the ensemble would likely use the same set of relatively strong predictors, and thus be very similar. Averaging over many very similar trees is unlikely to improve predictive accuracy. Thus, the randomization makes the trees more dissimilar, which likely improves performance of the ensemble. 
 
-The variable importances of the fitted random forests are depicted in Figures 3 and C1 (ESM).
+The variable importances of the fitted random forests are depicted in Figures 3 and C1 (ESM 3).
 
 
 ```{r echo=FALSE, eval=FALSE, warning=FALSE, message=FALSE}
@@ -427,7 +426,7 @@ imps$Coefficient <- round(imps$Coefficient, digits = 3)
 kable(imps, row.names = FALSE, align = c("l", "c"))
 ``` 
 
-Note that each rule has obtained an estimated coefficient, which are simply logistic regression coefficients: They reflect the expected increase in log-odds if the conditions of the rule apply. PRE also provides variable importance measures, which are presented for the fitted ensembles in Figures 3 and C1 (ESM). An introduction to PRE aimed at psychologists is provided in @FokkyStro20. 
+Note that each rule has obtained an estimated coefficient, which are simply logistic regression coefficients: They reflect the expected increase in log-odds if the conditions of the rule apply. PRE also provides variable importance measures, which are presented for the fitted ensembles in Figures 3 and C1 (ESM 3). An introduction to PRE aimed at psychologists is provided in @FokkyStro20. 
 
 
 ```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
@@ -517,7 +516,7 @@ load("knn_preds_test_item.Rda")
 
 ### Variable contributions
 
-Figure 3 depicts the variable contributions in the models fitted using RIASEC subscale scores. Note that the coefficients of the logistic regression reflect both direction and strength of the effects. For the other models, the variable contributions only reflect the strength of the variables' effects. Figure 3 shows similar variable contributions for all methods: The Social preferences are most important for predicting university major completed, followed by Realistic, followed by Enterprising preferences, while the Conventional and Artistic subscales contribute least. The variable contributions for models fitted using the item scores as predictors yielded similar conclusions and are provided and discussed in Figure C1 (ESM). 
+Figure 3 depicts the variable contributions in the models fitted using RIASEC subscale scores. Note that the coefficients of the logistic regression reflect both direction and strength of the effects. For the other models, the variable contributions only reflect the strength of the variables' effects. Figure 3 shows similar variable contributions for all methods: The Social subscale is most important for predicting university major completed, followed by Realistic, followed by Enterprising, while the Conventional and Artistic subscales contribute least. The variable contributions for models fitted using the item scores as predictors yielded similar conclusions and are provided and discussed in Figure C1 (ESM 3). 
 
 
 
@@ -604,7 +603,7 @@ text(imps, labels = varnames_s, cex = 1,
      col = rep(qualitative_hcl(6)), font = 2)
 #legend("topleft", legend = "PRE", cex = 1, bty = "n", text.font = 2)
 ```
-*Note.* Coefficients in the logistic regression and importance measures of the prediction rule ensemble are on the scale of standard deviations. Importance measures for the other methods are on the scale of variances; for those methods, the square roots are plotted.  
+*Note.* Coefficients in the logistic regression and importance measures of the prediction rule ensemble are on the scale of standard deviations. Importance measures for the other methods are on the scale of variances; for those methods, the square roots are plotted. Real = Realistic; Inve = Investigative; Arti = Artistic; Soci = Social; Ente = Enterprising; Conv = Conventional.
   
   
 
@@ -709,7 +708,7 @@ grid.arrange(p_subscales, p_items, ncol = 2, widths = c(6.75,8))
   
 In Figure 4, pseudo-$R^2$ values on train and test data are depicted with confidence intervals. Note that the confidence intervals for test data are systematically wider than for training data, but this is mostly due to the much larger number of training observations.
 
-The left panel of Figure 4 shows that with the subscale score, the best test set performance was obtained with the boosted tree ensemble, and very closely followed by the generalized additive model, prediction rule ensemble, random forest, $k$ nearest neighbours, logistic regression, and finally the decision tree. This latter result is rather unsurprising: a single decision tree is generally expected to have somewhat lower predictive accuracy, but they often 'win' in terms of interpretability, which can be observed in Figure 4, which shows that the decision tree uses only about half of the items for prediction. The boosted tree ensemble performing best is also not very surprising, giving its top-ranking performance in forecasting competitions. 
+The left panel of Figure 4 shows that with the subscale scores, the best test set performance was obtained with the boosted tree ensemble, and closely followed by the random forest, PRE, GAM, kNN, logistic regression, and finally the decision tree. This latter result is rather unsurprising: a single decision tree is generally expected to have somewhat lower predictive accuracy, but they often 'win' in terms of interpretability, which can be observed in Figure C1 (ESM 3), which shows that the decision tree uses only about half of the items for prediction. The boosted tree ensemble performing best is also not very surprising, giving its top-ranking performance in forecasting competitions. 
 
 From the left panel in Figure 4, we obtain the following take-aways:
 
@@ -719,7 +718,7 @@ From the left panel in Figure 4, we obtain the following take-aways:
 
 3. The more flexible methods (single tree, kNN, boosted ensemble, random forest) show greater susceptibility to overfitting.
 
-The subscale scores did not provide strong predictive power, with $R^2$ indicative of a moderate effect. Using item scores as predictors yielded a substantial (about 50\%) increase in variance explained. Again, best performance on the test data was obtained with the boosted tree ensemble. This time, it was followed by the prediction rule ensemble, then the generalized additive model, logistic regression, random forest, $k$ nearest neighbours, and finally the decision tree.
+The subscale scores did not provide strong predictive power, with $R^2$ indicative of a moderate effect. Using item scores as predictors yielded a substantial (about 50\%) increase in variance explained. Again, best performance on the test data was obtained with the boosted tree ensemble. This time, it was followed by PRE, GAM, penalized logistic regression, random forest, kNN, and finally the decision tree.
 
 From the right panel in Figure 4, we can add to our earlier take-aways:
 
@@ -732,7 +731,7 @@ From the right panel in Figure 4, we can add to our earlier take-aways:
 
 # Discussion
 
-Our conclusions can be succinctly summarized as: Logistic regression is hard to beat. Linear main effects models (i.e., (penalized) GLMs) tend to capture most of the explainable variance. This finding corresponds to a range of previous studies noting a lack of (substantial or significant) benefit of sophisticated machine learning methods over (penalized) regression, in prediction problems from psychology and medicine [e.g., @ElleyMcDo20; @LittyCook21; ChriyJie19; @GraveyNieb20; @NusoyTham20; @LynayDenn20]. 
+Our conclusions can be succinctly summarized as: Logistic regression is hard to beat. Linear main effects models (i.e., (penalized) GLMs) tend to capture most of the explainable variance. This finding corresponds to a range of previous studies noting a lack of (substantial or significant) benefit of sophisticated machine learning methods over (penalized) regression, in prediction problems from psychology and medicine [e.g., @ElleyMcDo20; @LittyCook21; @ChriyJie19; @GraveyNieb20; @NusoyTham20; @LynayDenn20]. 
 
 Sophisticated methods can only improve upon linear main-effects models by capturing more nuanced non-linearities and interactions. Almost by definition, these effects are of smaller size. Capturing these smaller, more nuanced effects comes at the price of an increased tendency to overfit. To reliably approximate small effects, much larger sample sizes are needed. Even if sophisticated methods outperform simpler methods like logistic regression in terms of predictive accuracy on test data, their tendency to overfit and their black-box nature may make them less suited for increasing scientific understanding, and/or making influential decisions about individuals (e.g., clinical or selection settings).
 

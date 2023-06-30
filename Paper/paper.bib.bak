@@ -595,7 +595,7 @@ url={https://arxiv.org/abs/1412.6572}
 }
 
 @Manual{GreeyBoeh20,
-  title  = {gbm: Generalized Boosted Regression Models},
+  title  = {{gbm}: Generalized Boosted Regression Models},
   author = {Brandon Greenwell and Bradley Boehmke and Jay Cunningham and GBM Developers},
   note   = {R package version 2.1.8},
   year   = {2020},
@@ -747,7 +747,7 @@ url={https://arxiv.org/abs/1412.6572}
 }
 
 @Article{RooiyKarcUR,
-  author = {de Rooij, Mark and Karch, Julian D. and Fokkema, Marjolein and Bakk, Zsuzsa and Pratiwi, Bunga Citra and Kelderman, Henk},
+  author = {{de Rooij}, Mark and Karch, Julian D. and Fokkema, Marjolein and Bakk, Zsuzsa and Pratiwi, Bunga Citra and Kelderman, Henk},
   title  = {SEM-based out-of-sample predictions},
   year   = {under review},
 }
@@ -904,7 +904,7 @@ url={https://arxiv.org/abs/1412.6572}
 
 @Article{LinyZhan99,
   author    = {Lin, Xihong and Zhang, Daowen},
-  journal   = {Journal of the royal statistical society: Series b (statistical methodology)},
+  journal   = {Journal of the Royal Statistical Society: Series {B} (Statistical Methodology)},
   title     = {Inference in generalized additive mixed modelsby using smoothing splines},
   year      = {1999},
   number    = {2},
@@ -1096,6 +1096,92 @@ url={https://arxiv.org/abs/1412.6572}
   volume    = {11},
   doi       = {10.1186/1471-2105-11-110},
   publisher = {Springer},
+}
+
+@Article{ZeilyHorn07,
+  author    = {Zeileis, Achim and Hornik, Kurt},
+  journal   = {Statistica Neerlandica},
+  title     = {Generalized M-fluctuation tests for parameter instability},
+  year      = {2007},
+  number    = {4},
+  pages     = {488--508},
+  volume    = {61},
+  publisher = {Wiley Online Library},
+}
+
+@Article{MerkyZeil13,
+  author    = {Merkle, Edgar C and Zeileis, Achim},
+  journal   = {Psychometrika},
+  title     = {Tests of measurement invariance without subgroups: A generalization of classical methods},
+  year      = {2013},
+  number    = {1},
+  pages     = {59--82},
+  volume    = {78},
+  publisher = {Springer},
+}
+
+@Article{MerkyFan14,
+  author    = {Merkle, Edgar C and Fan, Jinyan and Zeileis, Achim},
+  journal   = {Psychometrika},
+  title     = {Testing for measurement invariance with respect to an ordinal variable},
+  year      = {2014},
+  number    = {4},
+  pages     = {569--584},
+  volume    = {79},
+  publisher = {Springer},
+}
+
+@Article{Hans97,
+  author    = {Hansen, Bruce E},
+  journal   = {Journal of Business \& Economic Statistics},
+  title     = {Approximate asymptotic p values for structuras-change tests},
+  year      = {1997},
+  number    = {1},
+  pages     = {60--67},
+  volume    = {15},
+  publisher = {Taylor \& Francis},
+}
+
+@Article{ZeilyKoll20,
+  author  = {Zeileis, Achim and K{\"o}ll, Susanne and Graham, Nathaniel},
+  journal = {Journal of Statistical Software},
+  title   = {Various versatile variances: An object-oriented implementation of clustered covariances in R},
+  year    = {2020},
+  pages   = {1--36},
+  volume  = {95},
+}
+
+@Article{ZeilyHorn07,
+  author    = {Zeileis, Achim and Hornik, Kurt},
+  journal   = {Statistica Neerlandica},
+  title     = {Generalized M-fluctuation tests for parameter instability},
+  year      = {2007},
+  number    = {4},
+  pages     = {488--508},
+  volume    = {61},
+  publisher = {Wiley Online Library},
+}
+
+@Article{Leed98,
+  author    = {Van Der Leeden, Rien},
+  journal   = {Quality and Quantity},
+  title     = {Multilevel analysis of repeated measures data},
+  year      = {1998},
+  number    = {1},
+  pages     = {15--29},
+  volume    = {32},
+  publisher = {Springer},
+}
+
+@Article{RosnyRose96,
+  author    = {Rosnow, Ralph L and Rosenthal, Robert},
+  journal   = {Psychological methods},
+  title     = {Computing contrasts, effect sizes, and counternulls on other people's published data: General procedures for research consumers.},
+  year      = {1996},
+  number    = {4},
+  pages     = {331},
+  volume    = {1},
+  publisher = {American Psychological Association},
 }
 
 @Comment{jabref-meta: databaseType:bibtex;}
