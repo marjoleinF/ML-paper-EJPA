@@ -301,7 +301,7 @@ rf_preds_test_i <- predict(rf_i, data = data[test_ids, ])$predictions[ , "psycho
 
 ## Prediction Rule Ensemble
 
-```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+```{r, eval=FALSE, warning=FALSE, message=FALSE}
 library("pre")
 set.seed(42)
 pr_s <- pre(major ~ Real + Inve + Arti + Soci + Ente + Conv, data = data[train_ids , ], 
@@ -333,7 +333,7 @@ knitr::kable(imps, row.names = FALSE, align = c("l", "c"))
 ``` 
 
 
-```{r, eval=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+```{r, eval=FALSE, warning=FALSE, message=FALSE}
 pr_form <- formula(paste("major ~", paste(varnames_i, collapse = "+")))
 set.seed(42)
 pr_i <- pre(pr_form, data = data[train_ids , ], learnrate = .05,
